@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-bold mb-4">Settings</h2>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="list-group">
+                <a href="#general" class="list-group-item list-group-item-action active"
+                    data-bs-toggle="list">General</a>
+                <a href="#profile" class="list-group-item list-group-item-action" data-bs-toggle="list">Profile &
+                    Security</a>
+                <a href="#data" class="list-group-item list-group-item-action" data-bs-toggle="list">Data Management</a>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="tab-content">
+                <!-- GENERAL TAB -->
+                <div class="tab-pane fade show active" id="general">
+                    <form method="POST" action="{{ url_for('settings.update_preferences') }}">
+                        <div class="card mb-4 border-0 shadow-sm">
+                            <div class="card-header bg-transparent fw-bold">App Preferences</div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Appearance</label>
+                                    <div class="btn-group" role="group">
+                                        <input type="radio" class="btn-check" name="theme" id="themeLight" value="light"
+                                            {% if not current_user.settings or current_user.settings.theme=='light'
+                                            %}checked{% endif %}>
+                                        <label class="btn btn-outline-primary" for="themeLight"><i
+                                                class="bi bi-sun"></i> Light</label>
+
+                                        <input type="radio" class="btn-check" name="theme" id="themeDark" value="dark"
+                                            {% if current_user.settings and current_user.settings.theme=='dark'
+                                            %}checked{% endif %}>
+                                        <label class="btn btn-outline-primary" for="themeDark"><i
+                                                class="bi bi-moon"></i> Dark</label>
+                                    </div>
+                                </div>
+
+                                <hr>
+
+                                <label class="form-label fw-bold mb-2">Visible Expense Groups</label>
+                                <p class="text-muted small">Uncheck groups you don't use to hide them globally.</p>
+                                <div class="row">
+                                    {% for group in groups %}
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="hidden_groups"
+                                                value="{{ group }}" id="check_{{ group }}" {% if group not in
+                                                current_hidden %}checked{% endif %}>
+                                            <label class="form-check-label" for="check_{{ group }}">
+                                                {{ group }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent border-0 text-end">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- PROFILE TAB -->
+                <div class="tab-pane fade" id="profile">
+                    <div class="card mb-4 border-0 shadow-sm">
+                        <div class="card-header bg-transparent fw-bold">Account Details</div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('settings.update_profile') }}">
+                                <div class="mb-3">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" value="{{ current_user.email }}" disabled>
+                                    <div class="form-text">Email cannot be changed.</div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">New Password</label>
+                                        <input type="password" name="password" class="form-control"
+                                            placeholder="Leave blank to keep current">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Confirm Password</label>
+                                        <input type="password" name="confirm_password" class="form-control"
+                                            placeholder="Confirm new password">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update Password</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    {% if current_user.profile_type.name != 'INDIVIDUAL' %}
+                    <div class="card mb-4 border-0 shadow-sm">
+                        <div class="card-header bg-transparent fw-bold">Business Profile</div>
+                        <div class="card-body">
+                            <!-- Placeholder for Business updates -->
+                            <p>Business type: <strong>{{ current_user.profile_type.value }}</strong></p>
+                            <p class="text-muted">Contact support to change business entity type.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- DATA TAB -->
+                <div class="tab-pane fade" id="data">
+                    <div class="card mb-4 border-0 shadow-sm">
+                        <div class="card-header bg-transparent fw-bold">Export Data</div>
+                        <div class="card-body">
+                            <p>Download a copy of your financial records (Expenses & Income) in CSV format.</p>
+                            <form action="{{ url_for('settings.export_data') }}" method="POST">
+                                <button type="submit" class="btn btn-outline-success">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm border-danger">
+                        <div class="card-header bg-danger text-white fw-bold">Danger Zone</div>
+                        <div class="card-body">
+                            <h5 class="card-title text-danger">Reset All Data</h5>
+                            <p>This will permanently delete all your expenses, income, and investment records. This
+                                action cannot be undone.</p>
+                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#resetModal">
+                                <i class="bi bi-trash-fill"></i> Reset Account Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="modal fade" id="resetModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Confirm Data Reset</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="fw-bold">Are you absolutely sure?</p>
+                    <p>This will wipe all your financial data found in expenses, income, invoices, and wealth portfolio.
+                    </p>
+                    <form method="POST" action="{{ url_for('settings.reset_data') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Type "DELETE" to confirm</label>
+                            <input type="text" name="confirmation" class="form-control" required placeholder="DELETE">
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100">Establish Clean Slate</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

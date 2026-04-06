@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block guest_content %}
+<!-- Hero Section -->
+<div class="jumbotron text-center py-5 mb-5"
+    style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-radius: 20px;">
+    <div class="container">
+        <div class="logo-circle mx-auto mb-4" style="width: 80px; height: 80px; font-size: 2.5rem;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 18V6L18 18V6" stroke="white" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                <path d="M4 10H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                <path d="M4 14H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+            </svg>
+        </div>
+        <h1 class="display-4 fw-bold">TaxOnTheGo</h1>
+        <p class="lead text-muted mb-4">Your money. Your taxes. Made simple.</p>
+        <p class="mb-5">Experience real-time tax liability tracking, smart invoicing, and automated financial compliance
+            for Nigerian professionals and businesses.</p>
+
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-5 shadow-sm">Get Started</a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-5">Login</a>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row text-center mb-5">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm hover-elevate">
+            <div class="card-body p-4">
+                <div class="icon-square bg-light text-primary mb-3 rounded-3 mx-auto"
+                    style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-calculator fs-4"></i>
+                </div>
+                <h5 class="fw-bold">Smart Tax Logic</h5>
+                <p class="text-muted">Automated PAYE, VAT, and CIT calculations tailored to Nigerian tax laws.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm hover-elevate">
+            <div class="card-body p-4">
+                <div class="icon-square bg-light text-success mb-3 rounded-3 mx-auto"
+                    style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-receipt fs-4"></i>
+                </div>
+                <h5 class="fw-bold">Invoicing & WHT</h5>
+                <p class="text-muted">Create professional invoices and track Withholding Tax credits automatically.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm hover-elevate">
+            <div class="card-body p-4">
+                <div class="icon-square bg-light text-warning mb-3 rounded-3 mx-auto"
+                    style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-piggy-bank fs-4"></i>
+                </div>
+                <h5 class="fw-bold">Wealth Portfolio</h5>
+                <p class="text-muted">Track assets, manage savings goals, and visualize your net worth growth.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trust/Footer Section -->
+<div class="text-center text-muted mb-5">
+    <small>© 2025 TaxOnTheGo. Compliant with FIRS & LIRS Regulations.</small>
+</div>
+{% endblock %}

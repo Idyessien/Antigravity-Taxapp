@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block guest_content %}
+<h2>Register</h2>
+<form method="POST" id="registerForm">
+    <div class="mb-3">
+        <label>Email</label>
+        <input type="email" name="email" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>Password</label>
+        <input type="password" name="password" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>Profile Type</label>
+        <select name="profile_type" id="profileType" class="form-control" onchange="toggleFields()" required>
+            {% for type in profile_types %}
+            <option value="{{ type.value }}">{{ type.value }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Individual Subtype Removed -->
+
+    <div class="mb-3 d-none" id="businessFields">
+        <label>Industry</label>
+        <select name="industry" class="form-control">
+            {% for ind in industries %}
+            <option value="{{ ind.value }}">{{ ind.value }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Register</button>
+</form>
+
+<script>
+    function toggleFields() {
+        const type = document.getElementById('profileType').value;
+        const bizFields = document.getElementById('businessFields');
+
+        if (type === 'Individual') {
+            bizFields.classList.add('d-none');
+        } else {
+            bizFields.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

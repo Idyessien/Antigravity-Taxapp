@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Invoices</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createInvoiceModal">
+            <i class="bi bi-file-earmark-plus"></i> Create Invoice
+        </button>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Inv. #</th>
+                            <th>Date</th>
+                            <th>Client</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                        <tr>
+                            <td class="fw-bold">{{ inv.invoice_number }}</td>
+                            <td>
+                                <div>{{ inv.date_issued.strftime('%d %b %Y') }}</div>
+                                <small class="text-danger">Due: {{ inv.due_date.strftime('%d %b') }}</small>
+                            </td>
+                            <td>{{ inv.debtor.name }}</td>
+                            <td class="fw-bold">₦{{ "{:,.2f}".format(inv.total_amount) }}</td>
+                            <td>
+                                {% if inv.status.value == 'Draft' %}
+                                <span class="badge bg-secondary">Draft</span>
+                                {% elif inv.status.value == 'Sent' %}
+                                <span class="badge bg-primary">Sent</span>
+                                {% elif inv.status.value == 'Paid' %}
+                                <span class="badge bg-success">Paid</span>
+                                {% else %}
+                                <span class="badge bg-danger">Overdue</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('business.view_invoice', id=inv.id) }}"
+                                    class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">No invoices yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="createInvoiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">New Invoice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Client</label>
+                        <select name="debtor_id" class="form-select" required>
+                            {% for debtor in debtors %}
+                            <option value="{{ debtor.id }}">{{ debtor.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text"><a href="{{ url_for('business.debtors') }}">Add new client</a></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Due Date</label>
+                        <input type="date" name="due_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Create & Edit Items</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

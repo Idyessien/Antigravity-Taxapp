@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-0">Wealth & Reserves</h1>
+            <p class="text-muted">Manage your portfolio, savings, and tax reserves.</p>
+        </div>
+        <a href="{{ url_for('investment.optimizer') }}" class="btn btn-outline-warning">
+            <i class="bi bi-lightning-charge-fill"></i> Optimizer
+        </a>
+    </div>
+
+    <!-- Summary Cards (Glassmorphism) -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="card-body">
+                    <h5 class="card-title opacity-75"><i class="bi bi-briefcase-fill me-2"></i>Total Portfolio Value
+                    </h5>
+                    <h2 class="fw-bold mb-0">₦{{ "{:,.2f}".format(tax_info.portfolio_value) }}</h2>
+                    <small class="opacity-75">Investments + Assets</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title text-muted"><i class="bi bi-graph-up-arrow me-2"></i>Capital Gains Tax
+                            </h5>
+                            <h2 class="fw-bold text-dark mb-0">₦{{ "{:,.2f}".format(tax_info.cgt_tax) }}</h2>
+                        </div>
+                        <span
+                            class="badge {{ 'bg-success' if tax_info.cgt_status == 'Exempt' else 'bg-warning text-dark' }}">
+                            {{ tax_info.cgt_status }}
+                        </span>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        {% if tax_info.cgt_status == 'Exempt' %}
+                        <i class="bi bi-check-circle-fill text-success"></i> Gains are tax-free under current laws.
+                        {% else %}
+                        <i class="bi bi-exclamation-circle-fill text-warning"></i> Taxable event triggered.
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs for Goals vs Assets -->
+    <ul class="nav nav-pills mb-3" id="wealthTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="goals-tab" data-bs-toggle="pill" data-bs-target="#goals"
+                type="button">Savings Goals</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="assets-tab" data-bs-toggle="pill" data-bs-target="#assets" type="button">Asset
+                Portfolio</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="wealthTabContent">
+        <!-- SAVINGS GOALS TAB -->
+        <div class="tab-pane fade show active" id="goals">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">Active Goals</h5>
+                    <button class="btn btn-primary btn-sm rounded-pill px-3" data-bs-toggle="modal"
+                        data-bs-target="#addGoalModal">
+                        <i class="bi bi-plus-lg"></i> New Goal
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if goals %}
+                    <div class="row">
+                        {% for goal in goals %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100 border-light bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="fw-bold text-dark">{{ goal.name }}</h6>
+                                        <div class="dropdown">
+                                            <button class="btn btn-link btn-sm text-muted p-0"
+                                                data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" href="#"
+                                                        onclick="editGoal('{{ goal.id }}', '{{ goal.name }}', '{{ goal.target_amount }}', '{{ goal.current_amount }}', '{{ goal.deadline }}')">Edit
+                                                        Details</a></li>
+                                                <li>
+                                                    <form action="{{ url_for('investment.delete_goal', id=goal.id) }}"
+                                                        method="POST" onsubmit="return confirm('Delete this goal?')">
+                                                        <button type="submit"
+                                                            class="dropdown-item text-danger">Delete</button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-baseline mb-2">
+                                        <h3 class="fw-bold mb-0 text-primary">₦{{ "{:,.0f}".format(goal.current_amount)
+                                            }}</h3>
+                                        <small class="text-muted ms-2">/ ₦{{ "{:,.0f}".format(goal.target_amount)
+                                            }}</small>
+                                    </div>
+
+                                    {% set percent = (goal.current_amount / goal.target_amount * 100) if
+                                    goal.target_amount > 0 else 0 %}
+                                    <div class="progress mb-2" style="height: 8px;">
+                                        <div class="progress-bar bg-gradient-success" role="progressbar"
+                                            style="width: {{ percent }}%"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between small text-muted">
+                                        <span>{{ "{:.0f}".format(percent) }}%</span>
+                                        {% if goal.deadline %}
+                                        <span><i class="bi bi-clock"></i> {{ goal.deadline.strftime('%b %Y') }}</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <button class="btn btn-outline-primary w-100 mt-3 btn-sm rounded-pill"
+                                        onclick="topUpGoal('{{ goal.id }}', '{{ goal.name }}')">
+                                        <i class="bi bi-plus-circle"></i> Top Up
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <div class="display-1 text-muted opacity-25 mb-3"><i class="bi bi-safe"></i></div>
+                        <h5 class="text-muted">No Goals Yet</h5>
+                        <p class="text-muted small">Start verifying your financial future today.</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addGoalModal">Create
+                            Tax Reserve or Savings Goal</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ASSETS TAB -->
+        <div class="tab-pane fade" id="assets">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">Portfolio Details</h5>
+                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3" data-bs-toggle="collapse"
+                        data-bs-target="#addAssetForm">
+                        <i class="bi bi-journal-plus"></i> Log Asset
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Inline Add Form -->
+                    <div class="collapse mb-4" id="addAssetForm">
+                        <div class="card bg-light border-0 p-3">
+                            <form method="POST" action="{{ url_for('investment.add_investment') }}">
+                                <h6 class="mb-3 text-primary">New Investment Entry</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <input type="text" name="name" class="form-control" placeholder="Asset Name"
+                                            required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <select name="asset_type" class="form-select">
+                                            {% for a in asset_types %}
+                                            <option value="{{ a.value }}">{{ a.value }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <select name="sub_type" class="form-select">
+                                            {% for s in sub_types %}
+                                            <option value="{{ s.value }}">{{ s.value }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select name="funding_source" class="form-select text-primary fw-bold">
+                                            <option value="Brought Forward (Existing)">Brought Forward</option>
+                                            <option value="Purchased from Income">Purchased from Income</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" step="0.01" name="total_value" class="form-control"
+                                            placeholder="Value (₦)" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" step="0.01" name="annual_gain" class="form-control"
+                                            placeholder="Annual Gain (₦)">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="submit" class="btn btn-primary w-100">Add</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Asset Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Asset</th>
+                                    <th>Type</th>
+                                    <th>Current Value</th>
+                                    <th>Annual Gain</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inv in investments %}
+                                <tr>
+                                    <td class="fw-bold">{{ inv.name }}</td>
+                                    <td><span class="badge bg-secondary">{{ inv.asset_type.value }}</span> <small
+                                            class="text-muted d-block">{{ inv.sub_type.value }}</small></td>
+                                    <td>₦{{ "{:,.2f}".format(inv.total_value) }}</td>
+                                    <td class="text-success">+₦{{ "{:,.2f}".format(inv.annual_gain) }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-link text-primary"
+                                                onclick="editInvestment('{{ inv.id }}', '{{ inv.name }}', '{{ inv.asset_type.value }}', '{{ inv.sub_type.value }}', '{{ inv.total_value }}', '{{ inv.annual_gain }}', '{{ inv.disposal_proceeds }}', '{{ inv.chargeable_gains }}')">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <form action="{{ url_for('investment.delete_investment', id=inv.id) }}"
+                                                method="POST" class="d-inline"
+                                                onsubmit="return confirm('Delete this investment?')">
+                                                <button type="submit" class="btn btn-sm btn-link text-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Add Goal Modal (Dynamic) -->
+    <div class="modal fade" id="addGoalModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">New Savings Goal</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form action="{{ url_for('investment.add_goal') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Goal Name</label>
+                            <!-- Context Aware Placeholder -->
+                            {% if user.profile_type.name == 'INDIVIDUAL' %}
+                            <input type="text" name="name" class="form-control"
+                                placeholder="e.g. Wedding Fund, Emergency Savings" required>
+                            {% else %}
+                            <input type="text" name="name" class="form-control"
+                                placeholder="e.g. Tax Reserve, Equipment Replacement, Expansion Fund" required>
+                            {% endif %}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Target Amount (₦)</label>
+                                <input type="number" step="0.01" name="target_amount" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Current Savings (₦)</label>
+                                <input type="number" step="0.01" name="current_amount" class="form-control" value="0">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Target Date</label>
+                            <input type="date" name="deadline" class="form-control" id="newGoalDeadline">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2">Create Goal</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Goal Modal -->
+    <div class="modal fade" id="editGoalModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="editGoalTitle">Edit Goal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="editGoalForm" method="POST">
+                        <!-- Top Up Section -->
+                        <div id="topUpFields" class="d-none">
+                            <div class="text-center mb-4">
+                                <i class="bi bi-piggy-bank display-4 text-success"></i>
+                                <h5 class="mt-2">Add Funds</h5>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Amount to Add (₦)</label>
+                                <input type="number" step="0.01" name="add_amount" class="form-control form-control-lg"
+                                    placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- Edit Details Section -->
+                        <div id="editGoalDetails">
+                            <div class="mb-3">
+                                <label class="form-label">Goal Name</label>
+                                <input type="text" name="name" id="editGoalName" class="form-control">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Target (₦)</label>
+                                    <input type="number" step="0.01" name="target_amount" id="editGoalTarget"
+                                        class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Current (₦)</label>
+                                    <input type="number" step="0.01" name="current_amount" id="editGoalCurrent"
+                                        class="form-control">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Deadline</label>
+                                <input type="date" name="deadline" id="editGoalDeadline" class="form-control">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Investment Modal (Basic implementation kept for functionality) -->
+    <div class="modal fade" id="editInvestmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Asset</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editInvestmentForm" method="POST">
+                        <input type="text" name="name" id="editName" class="form-control mb-3" placeholder="Name"
+                            required>
+                        <div class="d-flex gap-2 mb-3">
+                            <select name="asset_type" id="editAssetType" class="form-control">
+                                {% for a in asset_types %}<option value="{{ a.value }}">{{ a.value }}</option>{% endfor
+                                %}
+                            </select>
+                            <select name="sub_type" id="editSubType" class="form-control">
+                                {% for s in sub_types %}<option value="{{ s.value }}">{{ s.value }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <input type="number" step="0.01" name="total_value" id="editValue" class="form-control mb-3"
+                            placeholder="Value">
+                        <input type="number" step="0.01" name="annual_gain" id="editGain" class="form-control mb-3"
+                            placeholder="Gain">
+                        <div class="row">
+                            <div class="col-6"><input type="number" step="0.01" name="disposal_proceeds"
+                                    id="editProceeds" class="form-control" placeholder="Proceeds"></div>
+                            <div class="col-6"><input type="number" step="0.01" name="chargeable_gains"
+                                    id="editChargeable" class="form-control" placeholder="Capital Gain"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Update Asset</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Set min date to today for new goal
+        document.addEventListener('DOMContentLoaded', function () {
+            // Removed min date restriction to fix selection issues
+        });
+
+        // Existing Scripts for Modals
+        function editInvestment(id, name, type, subType, value, gain, proceeds, chargeable) {
+            document.getElementById('editName').value = name;
+            document.getElementById('editAssetType').value = type;
+            document.getElementById('editSubType').value = subType;
+            document.getElementById('editValue').value = value;
+            document.getElementById('editGain').value = gain;
+            document.getElementById('editProceeds').value = proceeds;
+            document.getElementById('editChargeable').value = chargeable;
+            document.getElementById('editInvestmentForm').action = "/wealth/edit/" + id;
+            new bootstrap.Modal(document.getElementById('editInvestmentModal')).show();
+        }
+
+        function topUpGoal(id, name) {
+            document.getElementById('editGoalTitle').innerText = 'Top Up: ' + name;
+            document.getElementById('editGoalForm').action = "/wealth/goal/edit/" + id;
+            document.getElementById('topUpFields').classList.remove('d-none');
+            document.getElementById('editGoalDetails').classList.add('d-none');
+            new bootstrap.Modal(document.getElementById('editGoalModal')).show();
+        }
+
+        function editGoal(id, name, target, current, deadline) {
+            document.getElementById('editGoalTitle').innerText = 'Edit Goal';
+            document.getElementById('editGoalForm').action = "/wealth/goal/edit/" + id;
+            document.getElementById('topUpFields').classList.add('d-none');
+            document.getElementById('editGoalDetails').classList.remove('d-none');
+            document.getElementById('editGoalName').value = name;
+            document.getElementById('editGoalTarget').value = target;
+            document.getElementById('editGoalCurrent').value = current;
+            if (deadline && deadline != 'None') {
+                document.getElementById('editGoalDeadline').value = deadline.split(' ')[0];
+            }
+            new bootstrap.Modal(document.getElementById('editGoalModal')).show();
+        }
+    </script>
+</div>
+{% endblock %}

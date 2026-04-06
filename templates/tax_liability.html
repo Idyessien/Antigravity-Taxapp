@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4 align-items-center d-print-none">
+        <div class="col-md-5">
+            <h2>Tax Liability</h2>
+            <p class="text-muted">Breakdown for tax year: <strong>{{ selected_year }}</strong></p>
+        </div>
+        <div class="col-md-7 text-end">
+            <!-- Year Selector -->
+            <form class="d-inline-block me-2" method="GET">
+                <select name="year" class="form-select d-inline-block w-auto" onchange="this.form.submit()">
+                    {% for y in range(current_year - 2, current_year + 2) %}
+                    <option value="{{ y }}" {% if y==selected_year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+
+            <button class="btn btn-outline-secondary me-2" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print/PDF
+            </button>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#whtModal">
+                <i class="bi bi-file-earmark-plus"></i> Add WHT Credit
+            </button>
+        </div>
+    </div>
+
+    <!-- Print Header -->
+    <div class="d-none d-print-block mb-4 text-center">
+        <h2>Tax Liability Breakdown - {{ selected_year }}</h2>
+        <p>Generated on {{ datetime.utcnow().strftime('%Y-%m-%d') }}</p>
+    </div>
+
+    <!-- Top Cards: Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Total Gross Income ({{ selected_year }})</h6>
+                    {% if profile_type.value == 'Individual' %}
+                    <h3 class="text-dark">₦ {{ "{:,.2f}".format(tax_info.gross_income) }}</h3>
+                    {% else %}
+                    <h3 class="text-dark">₦ {{ "{:,.2f}".format(tax_info.revenue) }}</h3>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Calculated Tax</h6>
+                    <h3 class="text-primary">₦ {{ "{:,.2f}".format(tax_info.total_tax) }}</h3>
+                    <small>Before WHT Credits</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center bg-light border-primary shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Net Payable</h6>
+                    <h3 class="text-success fw-bold">₦ {{ "{:,.2f}".format(net_payable) }}</h3>
+                    <small class="text-muted">For {{ selected_year }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Tax Calculation Breakdown -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Tax Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% if profile_type.value == 'Individual' %}
+                        <!-- Individual Waterfall -->
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Gross Income</strong></span>
+                            <span>₦ {{ "{:,.2f}".format(tax_info.gross_income) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between text-muted">
+                            <span><i class="bi bi-dash-circle"></i> Deductions Total</span>
+                            <span class="text-danger">- ₦ {{ "{:,.2f}".format(tax_info.deductions) }}</span>
+                        </li>
+                        <!-- Deduction Details (Indented) -->
+                        <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
+                            <span>Pension (8%)</span>
+                            <span>{{ "{:,.2f}".format(tax_info.breakdown.pension) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
+                            <span>NHF (2.5%)</span>
+                            <span>{{ "{:,.2f}".format(tax_info.breakdown.nhf) }}</span>
+                        </li>
+                        {% if tax_info.breakdown.rent_relief > 0 %}
+                        <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
+                            <span>Rent Relief (Max 500k)</span>
+                            <span>{{ "{:,.2f}".format(tax_info.breakdown.rent_relief) }}</span>
+                        </li>
+                        {% endif %}
+                        {% if tax_info.breakdown.health > 0 %}
+                        <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
+                            <span>Health Insurance</span>
+                            <span>{{ "{:,.2f}".format(tax_info.breakdown.health) }}</span>
+                        </li>
+                        {% endif %}
+                        <li class="list-group-item d-flex justify-content-between bg-light">
+                            <span><strong>Taxable Income</strong></span>
+                            <strong>₦ {{ "{:,.2f}".format(tax_info.taxable_income) }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><i class="bi bi-calculator"></i> Tax Calculated (Bands)</span>
+                            <span>+ ₦ {{ "{:,.2f}".format(tax_info.total_tax) }}</span>
+                        </li>
+                        {% else %}
+                        <!-- Corporate Waterfall -->
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Total Revenue</strong></span>
+                            <span>₦ {{ "{:,.2f}".format(tax_info.revenue) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between text-muted">
+                            <span><i class="bi bi-dash-circle"></i> Expenses</span>
+                            <span class="text-danger">- ₦ {{ "{:,.2f}".format(tax_info.revenue - tax_info.profit)
+                                }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between bg-light">
+                            <span><strong>Assessable Profit</strong></span>
+                            <strong>₦ {{ "{:,.2f}".format(tax_info.profit) }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><i class="bi bi-building"></i> Company Income Tax (CIT)</span>
+                            <span>₦ {{ "{:,.2f}".format(tax_info.cit_tax) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><i class="bi bi-mortarboard"></i> Development Levy (4%)</span>
+                            <span>₦ {{ "{:,.2f}".format(tax_info.dev_levy) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between fw-bold">
+                            <span>Total Tax Liability</span>
+                            <span>₦ {{ "{:,.2f}".format(tax_info.total_tax) }}</span>
+                        </li>
+                        {% endif %}
+
+                        <!-- WHT Credits Section -->
+                        <li class="list-group-item d-flex justify-content-between text-success">
+                            <span><i class="bi bi-check-circle"></i> Less: Offsettable WHT Credits</span>
+                            <span>- ₦ {{ "{:,.2f}".format(offsettable_total) }}</span>
+                        </li>
+
+                        <li
+                            class="list-group-item d-flex justify-content-between border-top border-2 border-dark mt-2 bg-light">
+                            <h5 class="mb-0">Net Payable To FIRS/LIRS</h5>
+                            <h5 class="mb-0 text-success">₦ {{ "{:,.2f}".format(net_payable) }}</h5>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- WHT Credit Tracker -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">WHT Credit Notes</h5>
+                    <span class="badge bg-secondary">Total: ₦ {{ "{:,.2f}".format(offsettable_total + final_tax_total)
+                        }}</span> <!-- ERROR: final_tax_total var name used in route -->
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Payer</th>
+                                    <th>Amount</th>
+                                    <th>Type</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for credit in credits %}
+                                <tr>
+                                    <td>{{ credit.date_received.strftime('%d-%m-%Y') }}</td>
+                                    <td>{{ credit.payer_name }}</td>
+                                    <td>₦{{ "{:,.2f}".format(credit.amount) }}</td>
+                                    <td>
+                                        {% if credit.is_final_tax %}
+                                        <span class="badge bg-warning text-dark" title="Cannot offset other taxes">Final
+                                            Tax</span>
+                                        {% else %}
+                                        <span class="badge bg-success" title="Offsets Tax Liability">Credit</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('wht.delete_wht_credit', id=credit.id) }}"
+                                            class="text-danger btn-sm"><i class="bi bi-trash"></i></a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No WHT credits logged yet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer text-muted small">
+                    <i class="bi bi-info-circle"></i> "Final Tax" items (like Dividend WHT for individuals) are not
+                    deducted from your main tax liability.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add WHT Modal -->
+<div class="modal fade" id="whtModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('wht.add_wht_credit') }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Log WHT Credit Note</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Payer Name (Who deducted it?)</label>
+                        <input type="text" name="payer_name" class="form-control" placeholder="e.g. Client X, Bank Y"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Amount (₦)</label>
+                        <input type="text" name="amount" class="form-control currency-input" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Date Received</label>
+                        <input type="date" name="date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Description</label>
+                        <input type="text" name="description" class="form-control" placeholder="Optional notes">
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_final_tax" id="finalTaxCheck">
+                        <label class="form-check-label" for="finalTaxCheck">Is this a <strong>Final
+                                Tax</strong>?</label>
+                        <div class="form-text">If checked, this credit will NOT reduce your computed tax liability (e.g.
+                            WHT on Dividends for individuals).</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Save Credit</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

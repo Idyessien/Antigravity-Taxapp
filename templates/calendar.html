@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Statutory Compliance Calendar</h2>
+        <div class="text-end">
+            <h4>Compliance Score</h4>
+            {% if score == 100 %}
+            <span class="badge bg-success p-2">{{ score|round }}% - Excellent</span>
+            {% elif score >= 50 %}
+            <span class="badge bg-warning text-dark p-2">{{ score|round }}% - Needs Attention</span>
+            {% else %}
+            <span class="badge bg-danger p-2">{{ score|round }}% - At Risk</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Deadlines are automatically generated based on your profile type
+        (Individual/Business).
+    </div>
+
+    <div class="row">
+        {% for deadline in deadlines %}
+        <div class="col-md-6 mb-3">
+            <div class="card h-100 {{ 'border-success' if deadline.is_completed else 'border-danger' }}">
+                <div class="card-body">
+                    <h5 class="card-title d-flex justify-content-between">
+                        {{ deadline.title }}
+                        {% if deadline.is_completed %}
+                        <span class="badge bg-success">Completed</span>
+                        {% else %}
+                        <span class="badge bg-danger">Pending</span>
+                        {% endif %}
+                    </h5>
+                    <h6 class="card-subtitle mb-2 text-muted">Due: {{ deadline.due_date.strftime('%d %b %Y') }}</h6>
+                    <p class="card-text">{{ deadline.description }}</p>
+
+                    {% if not deadline.is_completed %}
+                    <a href="{{ url_for('compliance.complete_deadline', id=deadline.id) }}"
+                        class="btn btn-sm btn-outline-success">Mark as Done</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center text-muted">
+            <p>No upcoming statutory deadlines found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

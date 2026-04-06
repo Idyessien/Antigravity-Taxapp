@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container h-100 d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card border-0 shadow-lg" style="width: 100%; max-width: 600px; background: rgba(255,255,255,0.95);">
+        <div class="card-body p-5">
+            <div class="text-center mb-4">
+                <i class="bi bi-stars text-primary display-4"></i>
+                <h2 class="fw-bold mt-3">Welcome to Antigravity</h2>
+                <p class="text-muted">Let's personalize your financial workspace.</p>
+            </div>
+
+            <form action="{{ url_for('main.onboarding_complete') }}" method="POST">
+                <!-- Step 1: Profile Confirmation -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">You are registered as:</label>
+                    <div class="p-3 bg-light rounded d-flex justify-content-between align-items-center border">
+                        <div>
+                            <span class="badge bg-primary mb-1">{{ user.profile_type.value }}</span>
+                            <div class="small text-muted">{{ user.email }}</div>
+                        </div>
+                        <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                    </div>
+                </div>
+
+                {% if user.profile_type.name == 'INDIVIDUAL' %}
+                <!-- Individual Questions -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">What is your primary financial goal?</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="goal" id="goal1" value="Emergency Fund" checked>
+                            <label class="btn btn-outline-primary w-100 text-start" for="goal1">
+                                <i class="bi bi-shield-check me-2"></i>Emergency Fund
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="goal" id="goal2" value="Wealth Building">
+                            <label class="btn btn-outline-primary w-100 text-start" for="goal2">
+                                <i class="bi bi-graph-up me-2"></i>Wealth Building
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="goal" id="goal3" value="Tax Optimization">
+                            <label class="btn btn-outline-primary w-100 text-start" for="goal3">
+                                <i class="bi bi-calculator me-2"></i>Tax Optimization
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="goal" id="goal4" value="Debt Repayment">
+                            <label class="btn btn-outline-primary w-100 text-start" for="goal4">
+                                <i class="bi bi-credit-card me-2"></i>Debt Repayment
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Business Questions -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">What is your business focus?</label>
+                    <select name="industry" class="form-select form-select-lg">
+                        <option value="" selected disabled>Select Industry...</option>
+                        <option value="Professional Services">Professional Services (Consulting, IT)</option>
+                        <option value="Retail">Retail / E-commerce</option>
+                        <option value="Manufacturing">Manufacturing / Production</option>
+                        <option value="Real Estate">Real Estate / Construction</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Do you have employees?</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="employees" id="empNo" value="no" checked>
+                        <label class="btn btn-outline-secondary" for="empNo">No, Solo</label>
+
+                        <input type="radio" class="btn-check" name="employees" id="empYes" value="yes">
+                        <label class="btn btn-outline-secondary" for="empYes">Yes, I have staff</label>
+                    </div>
+                    <div class="form-text mt-2"><i class="bi bi-info-circle"></i> We will enable PAYE compliance if
+                        'Yes'.</div>
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm">
+                    Go to Dashboard <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

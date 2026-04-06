@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nigerian Tax Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+
+<body
+    data-theme="{{ current_user.settings.theme if current_user.is_authenticated and current_user.settings else 'light' }}">
+    {% if current_user.is_authenticated %}
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <div class="d-flex align-items-center mb-1">
+                    <div class="logo-circle">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 18V6L18 18V6" stroke="white" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M4 10H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                            <path d="M4 14H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <h3 class="fw-bold mb-0">TaxOnTheGo</h3>
+                </div>
+                <small class="text-muted d-block" style="font-size: 0.75rem; line-height: 1.2;">Your money. Your taxes.
+                    Made simple.</small>
+            </div>
+
+            <ul class="list-unstyled components">
+                <li>
+                    <a href="{{ url_for('main.dashboard') }}"
+                        class="{{ 'active' if request.endpoint == 'main.dashboard' }}">
+                        <i class="bi bi-grid-fill"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('income.income_dashboard') }}"
+                        class="{{ 'active' if request.endpoint == 'income.income_dashboard' }}">
+                        <i class="bi bi-wallet2"></i> Income
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('settings.expenses') }}"
+                        class="{{ 'active' if request.endpoint == 'settings.expenses' }}">
+                        <i class="bi bi-receipt"></i> Expenses
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('investment.wealth_dashboard') }}"
+                        class="{{ 'active' if 'investment' in request.endpoint }}">
+                        <i class="bi bi-piggy-bank"></i> Wealth
+                    </a>
+                </li>
+
+                {% if current_user.profile_type.name != 'INDIVIDUAL' %}
+                <li>
+                    <a href="#bizSubmenu" data-bs-toggle="collapse" class="dropdown-toggle">
+                        <i class="bi bi-briefcase"></i> Business
+                    </a>
+                    <ul class="collapse list-unstyled ps-4" id="bizSubmenu">
+                        <li><a href="{{ url_for('business.debtors') }}">Debtors</a></li>
+                        <li><a href="{{ url_for('business.invoices') }}">Invoices</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+
+                <li>
+                    <a href="#compSubmenu" data-bs-toggle="collapse" class="dropdown-toggle">
+                        <i class="bi bi-shield-check"></i> Compliance
+                    </a>
+                    <ul class="collapse list-unstyled ps-4" id="compSubmenu">
+                        <li><a href="{{ url_for('compliance.vault') }}">Vault</a></li>
+                        <li><a href="{{ url_for('compliance.calendar') }}">Calendar</a></li>
+                        <li><a href="{{ url_for('wht.tax_liability') }}">Tax Liability</a></li>
+                    </ul>
+                </li>
+
+                <li>
+                    <a href="{{ url_for('settings.settings') }}"
+                        class="{{ 'active' if request.endpoint == 'settings.settings' }}">
+                        <i class="bi bi-gear"></i> Settings
+                    </a>
+                </li>
+            </ul>
+
+            <div class="mt-auto p-4">
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger w-100 btn-sm">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+        </nav>
+
+        <!-- Page Content -->
+        <div id="content">
+            <nav class="navbar navbar-expand-lg top-navbar">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-light d-md-none">
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                    <div class="ms-auto d-flex align-items-center">
+                        <div class="dropdown">
+                            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark"
+                                id="userMenu" data-bs-toggle="dropdown">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                                    style="width: 32px; height: 32px;">
+                                    {{ current_user.email[0].upper() }}
+                                </div>
+                                <span class="d-none d-sm-inline">{{ current_user.email }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end text-small shadow">
+                                <li><a class="dropdown-item" href="{{ url_for('settings.settings') }}">Profile</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Sign out</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="container-fluid p-4">
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-info shadow-sm border-0">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Login/Register Layout (Centered) -->
+    <nav class="navbar navbar-legacy navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+                <div class="logo-circle me-2" style="width: 32px; height: 32px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 18V6L18 18V6" stroke="white" stroke-width="2.5" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M4 10H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                        <path d="M4 14H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                    </svg>
+                </div>
+                TaxOnTheGo
+            </a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Login</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.register') }}">Register</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-info">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+        {% block guest_content %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Currency Masking Logic
+            const currencyInputs = document.querySelectorAll('.currency-input');
+
+            currencyInputs.forEach(input => {
+                input.addEventListener('input', function (e) {
+                    // 1. Get raw value, strip non-digits (allow one decimal point if needed, for now pure integers or standard float logic)
+                    let value = e.target.value;
+
+                    // Remove existing commas to get raw number string
+                    value = value.replace(/,/g, '');
+
+                    // Check if perfectly valid number (allow empty)
+                    if (value === '' || isNaN(value)) {
+                        // If user types non-numeric, strip it? For now, let's just strip non-digit/dot
+                        value = value.replace(/[^0-9.]/g, '');
+                    }
+
+                    // 2. Format with commas
+                    if (value) {
+                        // Split decimal to handle typing '1000.'
+                        const parts = value.split('.');
+                        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+                        e.target.value = parts.join('.');
+                    }
+                });
+            });
+
+            // Restrict Date Inputs: Removed global "No Future Dates" constraint to allow Planning features
+            // const today = new Date().toISOString().split('T')[0];
+            // document.querySelectorAll('input[type="date"]').forEach(input => {
+            //    input.setAttribute('max', today);
+            // });
+
+            // Initialize Bootstrap Tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+        });
+    </script>
+</body>
+
+</html>

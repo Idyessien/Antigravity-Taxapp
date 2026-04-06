@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Expenses Tracker</h2>
+        <div>
+            <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#customCatModal">
+                <i class="bi bi-folder-plus"></i> New Category
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logExpenseModal">
+                <i class="bi bi-wallet2"></i> Log Expense
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="card mb-4 bg-light">
+        <div class="card-body py-3">
+            <form method="GET" class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control"
+                        placeholder="Search expenses (keyword, amount)..." value="{{ request.args.get('search', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="date_range" class="form-select" onchange="toggleCustomDates(this.value)">
+                        <option value="4w" {% if request.args.get('date_range')=='4w' %}selected{% endif %}>Last 4 Weeks
+                        </option>
+                        <option value="3m" {% if request.args.get('date_range')=='3m' %}selected{% endif %}>Last 3
+                            Months</option>
+                        <option value="6m" {% if request.args.get('date_range')=='6m' %}selected{% endif %}>Last 6
+                            Months</option>
+                        <option value="12m" {% if request.args.get('date_range')=='12m' %}selected{% endif %}>Last 12
+                            Months</option>
+                        <option value="custom" {% if request.args.get('date_range')=='custom' %}selected{% endif %}>
+                            Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-2 custom-date" style="display:none;">
+                    <input type="date" name="start_date" class="form-control"
+                        value="{{ request.args.get('start_date', '') }}" placeholder="From">
+                </div>
+                <div class="col-md-2 custom-date" style="display:none;">
+                    <input type="date" name="end_date" class="form-control"
+                        value="{{ request.args.get('end_date', '') }}" placeholder="To">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-secondary">Filter</button>
+                    <a href="{{ url_for('settings.expenses') }}" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recent Expenses List -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Recent Expenses</h5>
+        </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Desc</th>
+                        <th>Amount</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exp in recent_expenses %}
+                    <tr>
+                        <td>{{ exp.date.strftime('%d-%m-%Y') }}</td>
+                        <td>
+                            {{ exp.category.name }}
+                            {% if budget_status[exp.category_id].is_over %}
+                            <span class="text-danger ms-1" title="Over Budget!" data-bs-toggle="tooltip">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ exp.description }}</td>
+                        <td>₦{{ "{:,.2f}".format(exp.amount) }}</td>
+                        <td><a href="{{ url_for('settings.delete_expense', id=exp.id) }}"
+                                class="text-danger">&times;</a></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="opacity-50 mb-3">
+                                <i class="bi bi-cart-x display-1 text-secondary"></i>
+                            </div>
+                            <h5 class="text-muted">No Expenses Found</h5>
+                            <p class="text-muted small">Great job! Or maybe you just haven't logged them yet?</p>
+                            <button class="btn btn-primary btn-sm rounded-pill mt-2" data-bs-toggle="modal"
+                                data-bs-target="#logExpenseModal">
+                                <i class="bi bi-wallet2"></i> Log Expense
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="text-muted mb-2"><strong>Budget Limits</strong> (Expand groups to set monthly targets)</p>
+
+    <form method="POST">
+        <div class="accordion" id="expensesAccordion">
+            {% for group in category_groups %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading{{ loop.index }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ loop.index }}" aria-expanded="false"
+                        aria-controls="collapse{{ loop.index }}">
+                        <strong>{{ group }}</strong>
+                    </button>
+                </h2>
+                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse"
+                    aria-labelledby="heading{{ loop.index }}" data-bs-parent="#expensesAccordion">
+                    <div class="accordion-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%">Category</th>
+                                    <th>Monthly Limit (₦)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in categories if cat.group == group %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span>{{ cat.name }}</span>
+                                            <div class="mt-1">
+                                                {% if "Rent" in cat.name %}
+                                                <span class="badge bg-success bg-opacity-75"
+                                                    style="font-size: 0.65em">Eligible for 20% Tax Relief</span>
+                                                <span class="badge bg-warning bg-opacity-75 text-dark"
+                                                    style="font-size: 0.65em">Annual Only</span>
+                                                {% endif %}
+                                                {% if "Health Insurance" in cat.name %}
+                                                <span class="badge bg-success bg-opacity-75"
+                                                    style="font-size: 0.65em">fully Tax Deductible</span>
+                                                {% endif %}
+                                                {% if "School Fees" in cat.name %}
+                                                <span class="badge bg-info bg-opacity-75 text-dark"
+                                                    style="font-size: 0.65em">VAT Exempt (Savings Tracker)</span>
+                                                {% endif %}
+
+                                                <!-- Budget Progress -->
+                                                {% set status = budget_status[cat.id] %}
+                                                {% if status.limit > 0 %}
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar {% if status.is_over %}bg-danger{% else %}bg-success{% endif %}"
+                                                        role="progressbar"
+                                                        style="width: {{ (status.spent / status.limit * 100)|round|int }}%">
+                                                    </div>
+                                                </div>
+                                                <small class="text-muted" style="font-size:0.7em">
+                                                    Spent: ₦{{ "{:,.0f}".format(status.spent) }} / ₦{{
+                                                    "{:,.0f}".format(status.limit) }}
+                                                </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm currency-input"
+                                            name="limit_{{ cat.id }}"
+                                            value="{{ '{:,.2f}'.format(budget_map.get(cat.id, 0.0)) if budget_map.get(cat.id, 0.0) > 0 else '' }}"
+                                            placeholder="Enter limit...">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-4 mb-5">
+            <button type="submit" class="btn btn-success btn-lg w-100">Save Expense Limits</button>
+        </div>
+    </form>
+</div>
+
+<!-- Custom Category Modal -->
+<div class="modal fade" id="customCatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('settings.add_custom_category') }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Custom Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Category Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Group</label>
+                        <select name="group" class="form-control">
+                            {% for group in category_groups %}
+                            <option value="{{ group }}">{{ group }}</option>
+                            {% endfor %}
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Add Category</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- Log Expense Modal -->
+<div class="modal fade" id="logExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('settings.add_expense') }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Log New Expense</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Date</label>
+                        <input type="date" name="date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Category</label>
+                        <select name="category_id" class="form-select" required>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.group }} - {{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="amortize" id="amortizeCheck">
+                        <label class="form-check-label" for="amortizeCheck">
+                            Amortize over 12 Months? (Split evenly)
+                        </label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Amount (₦)</label>
+                        <input type="text" name="amount" class="form-control currency-input" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Description</label>
+                        <input type="text" name="description" class="form-control">
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" name="add_to_wealth" id="addToWealth">
+                        <label class="form-check-label" for="addToWealth">Add to Wealth Portfolio?</label>
+                        <small class="form-text text-muted d-block">Check this if this expense is an investment
+                            purchase
+                            (e.g., buying stocks).</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Save Expense</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    function toggleCustomDates(val) {
+        const customFields = document.querySelectorAll('.custom-date');
+        if (val === 'custom') {
+            customFields.forEach(el => el.style.display = 'block');
+        } else {
+            customFields.forEach(el => el.style.display = 'none');
+        }
+    }
+
+    // Run on load to set initial state
+    document.addEventListener('DOMContentLoaded', function () {
+        const val = document.querySelector('select[name="date_range"]').value;
+        toggleCustomDates(val);
+    });
+</script>
+{% endblock %}
