@@ -11,7 +11,9 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key')
 # Using SQLite for local dev, compatible with PostgreSQL
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///site.db')
+import os
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'site.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -41,6 +43,16 @@ from wht_routes import wht_bp
 app.register_blueprint(wht_bp)
 from business_routes import business_bp
 app.register_blueprint(business_bp)
+
+
+@app.route('/initdb')
+def initdb():
+    try:
+        db.create_all()
+        return "Database created successfully! You can now register."
+    except Exception as e:
+        import traceback
+        return f"Database creation failed:<br><pre>{traceback.format_exc()}</pre>"
 
 if __name__ == '__main__':
     with app.app_context():
