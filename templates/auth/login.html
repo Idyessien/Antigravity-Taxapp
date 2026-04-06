@@ -1,15 +1,30 @@
 {% extends "base.html" %}
 {% block guest_content %}
-<h2>Login</h2>
-<form method="POST">
-    <div class="mb-3">
-        <label>Email</label>
-        <input type="email" name="email" class="form-control" required>
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0" style="border-radius: 12px;">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold text-dark">Welcome Back</h3>
+                    <p class="text-muted">Sign in to continue to TaxOnTheGo</p>
+                </div>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Email Address</label>
+                        <input type="email" name="email" class="form-control form-control-lg bg-light border-0" required placeholder="name@example.com">
+                    </div>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label text-muted small fw-bold text-uppercase mb-0">Password</label>
+                            <a href="{{ url_for('auth.forgot_password') }}" class="small text-decoration-none fw-bold">Forgot Password?</a>
+                        </div>
+                        <input type="password" name="password" class="form-control form-control-lg bg-light border-0 mt-2" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm">Login</button>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="mb-3">
-        <label>Password</label>
-        <input type="password" name="password" class="form-control" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Login</button>
-</form>
+</div>
 {% endblock %}

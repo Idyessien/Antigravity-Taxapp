@@ -81,6 +81,15 @@
                     </ul>
                 </li>
 
+                {% if current_user.is_admin %}
+                <li>
+                    <a href="{{ url_for('admin.dashboard') }}"
+                        class="{{ 'active' if request.endpoint == 'admin.dashboard' }}">
+                        <i class="bi bi-shield-lock-fill text-danger"></i> Admin Panel
+                    </a>
+                </li>
+                {% endif %}
+
                 <li>
                     <a href="{{ url_for('settings.settings') }}"
                         class="{{ 'active' if request.endpoint == 'settings.settings' }}">

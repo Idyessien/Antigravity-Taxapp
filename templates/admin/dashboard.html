@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Admin Dashboard</h2>
+        <span class="badge bg-primary">Total Users: {{ users|length }}</span>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <h5 class="card-title text-muted mb-3">Registered Users</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Profile Type</th>
+                            <th>Verified</th>
+                            <th>Joined (UTC)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>{{ u.id }}</td>
+                            <td>
+                                <strong>{{ u.email }}</strong>
+                                {% if u.is_admin %}
+                                <span class="badge bg-danger ms-2">Admin</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ u.profile_type.value }}</span>
+                            </td>
+                            <td>
+                                {% if u.is_email_verified %}
+                                <span class="badge bg-success data-bs-toggle='tooltip' title='Email Verified'"><i class="bi bi-check-circle-fill"></i> Yes</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> No</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ u.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">No registered users found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

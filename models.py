@@ -48,6 +48,10 @@ class User(UserMixin, db.Model):
     # Pro feature
     is_pro = db.Column(db.Boolean, default=False)
     
+    # Admin & Verification properties
+    is_admin = db.Column(db.Boolean, default=False)
+    is_email_verified = db.Column(db.Boolean, default=False)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
