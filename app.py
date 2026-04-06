@@ -49,7 +49,12 @@ app.register_blueprint(business_bp)
 def initdb():
     try:
         db.create_all()
-        return "Database created successfully! You can now register."
+        try:
+            from seed_data import seed_categories
+            seed_categories()
+        except ImportError:
+            pass # Failsafe if seed_data is not shipped
+        return "Database created and Categories Seeded successfully!"
     except Exception as e:
         import traceback
         return f"Database creation failed:<br><pre>{traceback.format_exc()}</pre>"
