@@ -221,3 +221,16 @@ def reset_password(token):
         return redirect(url_for('auth.login'))
         
     return render_template('auth/reset_password.html', token=token)
+
+@auth.route('/test_email')
+def test_email():
+    try:
+        msg = Message("Tax App Diagnostic Test", 
+                      sender=current_app.config.get('MAIL_USERNAME', 'idyessien101@gmail.com'), 
+                      recipients=[current_app.config.get('MAIL_USERNAME', 'idyessien101@gmail.com')])
+        msg.body = "If you are reading this, Render has successfully authenticated with your Google App Password!"
+        mail.send(msg)
+        return "<h1>SUCCESS!</h1><p>Render connected to Google and sent the email! Check your inbox.</p>"
+    except Exception as e:
+        import traceback
+        return f"<h1>EMAIL FAILED</h1><h3>Here is the exact hidden error stopping it:</h3><pre>{traceback.format_exc()}</pre>"
