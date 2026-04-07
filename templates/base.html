@@ -12,6 +12,23 @@
 
 <body
     data-theme="{{ current_user.settings.theme if current_user.is_authenticated and current_user.settings else 'light' }}">
+
+    <!-- Impersonation Security Banner -->
+    {% if session.get('impersonating_admin_id') %}
+    <div class="bg-warning text-dark text-center py-2 fw-bold shadow-sm" style="position: sticky; top: 0; z-index: 1050; border-bottom: 3px solid #ffcc00;">
+        <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i> You are currently impersonating <strong>{{ current_user.email }}</strong>. 
+        <form action="{{ url_for('admin.revert_impersonation') }}" method="POST" class="d-inline ms-3">
+            <button type="submit" class="btn btn-sm btn-dark fw-bold px-3">Return to Admin</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Global Announcements Banner -->
+    {% if active_announcement %}
+    <div class="bg-info text-white text-center py-2 px-3 fw-bold" style="position: relative; z-index: 1040; background: linear-gradient(90deg, #0d6efd, #0dcaf0);">
+        <i class="bi bi-megaphone-fill me-2"></i> {{ active_announcement.message }}
+    </div>
+    {% endif %}
     {% if current_user.is_authenticated %}
     <div class="wrapper">
         <!-- Sidebar -->

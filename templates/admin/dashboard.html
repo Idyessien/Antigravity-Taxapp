@@ -3,53 +3,156 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Admin Dashboard</h2>
-        <span class="badge bg-primary">Total Users: {{ users|length }}</span>
+        <h2>Admin Control Center</h2>
+        <a href="{{ url_for('admin.export_users') }}" class="btn btn-success shadow-sm">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i> Export Users (CSV)
+        </a>
     </div>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
-            <h5 class="card-title text-muted mb-3">Registered Users</h5>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Email</th>
-                            <th>Profile Type</th>
-                            <th>Verified</th>
-                            <th>Joined (UTC)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for u in users %}
-                        <tr>
-                            <td>{{ u.id }}</td>
-                            <td>
-                                <strong>{{ u.email }}</strong>
-                                {% if u.is_admin %}
-                                <span class="badge bg-danger ms-2">Admin</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge bg-secondary">{{ u.profile_type.value }}</span>
-                            </td>
-                            <td>
-                                {% if u.is_email_verified %}
-                                <span class="badge bg-success data-bs-toggle='tooltip' title='Email Verified'"><i class="bi bi-check-circle-fill"></i> Yes</span>
+    <!-- Analytics KPIs -->
+    <div class="row mb-5">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-uppercase mb-2" style="opacity: 0.8; font-size: 0.8rem; font-weight: bold;">Total Users</h6>
+                    <h3 class="mb-0">{{ total_users }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-secondary text-white">
+                <div class="card-body">
+                    <h6 class="text-uppercase mb-2" style="opacity: 0.8; font-size: 0.8rem; font-weight: bold;">Pro Upgrade Ratio</h6>
+                    <h3 class="mb-0">{{ pro_users }} <small style="font-size: 1rem; opacity: 0.7;">/ {{ total_users }}</small></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-uppercase mb-2" style="opacity: 0.8; font-size: 0.8rem; font-weight: bold;">Business vs Individual</h6>
+                    <h3 class="mb-0">{{ business_count }} : {{ individual_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-uppercase mb-2" style="opacity: 0.8; font-size: 0.8rem; font-weight: bold;">Global Flow (NGN)</h6>
+                    <div style="font-size: 0.9rem;">
+                        <div>Tracked Income: <strong class="float-end">₦{{ "{:,.0f}".format(total_income) }}</strong></div>
+                        <div class="mt-1">Tracked Exp: <strong class="float-end">₦{{ "{:,.0f}".format(total_expenses) }}</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Announcements Column -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 mb-4 h-100">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold">Live Announcements</h5>
+                    <p class="text-muted small">Broadcast a message globally across the top banner of the application.</p>
+                    
+                    {% if active_announcement %}
+                    <div class="alert alert-warning mb-4">
+                        <small class="fw-bold d-block text-uppercase mb-1">Current Active Banner:</small>
+                        {{ active_announcement.message }}
+                        <form method="POST" action="{{ url_for('admin.disable_announcement') }}" class="mt-3">
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100">Disable Announcement</button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('admin.post_announcement') }}">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Post New Banner</label>
+                            <textarea name="message" class="form-control" rows="3" required placeholder="System downtime at 2 AM..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">Broadcast Instantly</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Table Column -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold mb-3">User Management</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User Email</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in users %}
+                                <tr>
+                                    <td><small class="text-muted">#{{ u.id }}</small></td>
+                                    <td>
+                                        <div class="fw-bold">{{ u.email }}</div>
+                                        <small class="text-muted">{{ u.profile_type.value }}</small>
+                                    </td>
+                                    <td>
+                                        {% if u.is_admin %}
+                                        <span class="badge bg-danger me-1">Admin</span>
+                                        {% endif %}
+                                        {% if u.is_pro %}
+                                        <span class="badge bg-warning text-dark me-1 border border-warning">Pro</span>
+                                        {% endif %}
+                                        {% if u.is_email_verified %}
+                                        <span class="badge bg-success data-bs-toggle='tooltip' title='Email Verified'"><i class="bi bi-check-circle-fill"></i></span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td class="text-end">
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                Manage
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                <li>
+                                                    <form action="{{ url_for('admin.impersonate', user_id=u.id) }}" method="POST">
+                                                        <button type="submit" class="dropdown-item"><i class="bi bi-person-badge text-primary me-2"></i> Log in As</button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form action="{{ url_for('admin.toggle_pro', user_id=u.id) }}" method="POST">
+                                                        <button type="submit" class="dropdown-item"><i class="bi bi-star-fill text-warning me-2"></i> Toggle Pro Tier</button>
+                                                    </form>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <form action="{{ url_for('admin.toggle_admin', user_id=u.id) }}" method="POST">
+                                                        <button type="submit" class="dropdown-item"><i class="bi bi-shield-lock-fill text-danger me-2"></i> Toggle Admin</button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form action="{{ url_for('admin.delete_user', user_id=u.id) }}" method="POST" onsubmit="return confirm('WARNING: Are you absolutely sure? All financial data belonging to this user will be purged permanently.');">
+                                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash-fill me-2"></i> Delete User Info</button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
                                 {% else %}
-                                <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> No</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ u.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">No registered users found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No registered users found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

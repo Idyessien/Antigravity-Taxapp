@@ -57,6 +57,15 @@ app.register_blueprint(business_bp)
 from admin_routes import admin_bp
 app.register_blueprint(admin_bp)
 
+@app.context_processor
+def inject_announcement():
+    try:
+        from models import Announcement
+        # Get the latest active announcement
+        active = Announcement.query.filter_by(is_active=True).order_by(Announcement.created_at.desc()).first()
+        return dict(active_announcement=active)
+    except:
+        return dict(active_announcement=None)
 
 @app.route('/initdb')
 def initdb():
