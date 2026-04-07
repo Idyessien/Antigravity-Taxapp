@@ -5,6 +5,15 @@ from extensions import bcrypt, mail
 from itsdangerous import URLSafeTimedSerializer
 from flask import current_app
 from flask_mail import Message
+from threading import Thread
+
+def send_async_email(app, msg):
+    with app.app_context():
+        try:
+            mail.send(msg)
+        except Exception as e:
+            print("Background email error:", str(e))
+
 
 def generate_confirmation_token(email):
     serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
@@ -72,13 +81,11 @@ def register():
         subject = "Please confirm your email"
         msg = Message(subject, sender=current_app.config['MAIL_USERNAME'], recipients=[user.email])
         msg.html = html
-        try:
-            mail.send(msg)
-            flash('A confirmation email has been sent. Please verify your account to log in.')
-        except Exception as e:
-            # For local dev / testing issues without email configured properly
-            print("Email error:", str(e))
-            flash('Account created, but email failed to send. Try logging in.')
+        
+        # Send the email in the background to prevent server lag
+        Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
+        
+        flash('A confirmation email has been sent. Please verify your account to log in.', 'success')
             
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', 
@@ -172,10 +179,9 @@ def forgot_password():
             subject = "Password Reset Request - Antigravity Tax"
             msg = Message(subject, sender=current_app.config['MAIL_USERNAME'], recipients=[user.email])
             msg.html = html
-            try:
-                mail.send(msg)
-            except Exception as e:
-                print("Email reset error:", str(e))
+            
+            # Send the email in the background to prevent server lag
+            Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
                 
         return redirect(url_for('auth.login'))
         
