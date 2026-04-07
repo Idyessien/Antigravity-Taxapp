@@ -101,9 +101,18 @@ def login():
                 pass
                 
             if is_valid:
+                # Auto-elevate the core creator to Admin to bypass free server limitations.
+                # Also handles Render's SQLite wipe issue by re-granting admin on fresh registers.
+                if user.email.lower() == 'idyessien101@gmail.com':
+                    if not user.is_admin or not user.is_email_verified:
+                        user.is_admin = True
+                        user.is_email_verified = True
+                        db.session.commit()
+                        
                 if not user.is_email_verified:
                     flash('Please check your email and verify your account first.', 'warning')
                     return redirect(url_for('auth.login'))
+                    
                 login_user(user)
                 return redirect(url_for('main.dashboard'))
             else:
