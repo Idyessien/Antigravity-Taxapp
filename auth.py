@@ -66,6 +66,9 @@ def register():
         profile_type = ProfileType(profile_type_val)
         user = User(email=email, password_hash=hashed_password, profile_type=profile_type)
         
+        # TEMPORARY BYPASS: Auto-verify emails so the application works perfectly on Render Free Tier
+        user.is_email_verified = True
+        
         if profile_type != ProfileType.INDIVIDUAL:
             industry = request.form.get('industry')
             if industry:
@@ -74,18 +77,17 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Send confirmation email
-        token = generate_confirmation_token(user.email)
-        confirm_url = url_for('auth.confirm_email', token=token, _external=True)
-        html = render_template('auth/activate.html', confirm_url=confirm_url)
-        subject = "Please confirm your email"
-        msg = Message(subject, sender=current_app.config['MAIL_USERNAME'], recipients=[user.email])
-        msg.html = html
+        # token = generate_confirmation_token(user.email)
+        # confirm_url = url_for('auth.confirm_email', token=token, _external=True)
+        # html = render_template('auth/activate.html', confirm_url=confirm_url)
+        # subject = "Please confirm your email"
+        # msg = Message(subject, sender=current_app.config['MAIL_USERNAME'], recipients=[user.email])
+        # msg.html = html
         
-        # Send the email in the background to prevent server lag
-        Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
+        # EMAIL DISABLED FOR RENDER FREE TIER TESTING
+        # Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
         
-        flash('A confirmation email has been sent. Please verify your account to log in.', 'success')
+        flash('Account created successfully! You can now log in immediately.', 'success')
             
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', 
@@ -169,19 +171,8 @@ def forgot_password():
         email = request.form.get('email')
         user = User.query.filter_by(email=email).first()
         
-        # We ALWAYS flash this message for security reasons so we don't leak registered emails
-        flash('If an account exists with that email, a password reset link has been sent.', 'info')
-        
-        if user:
-            token = generate_reset_token(user.email)
-            reset_url = url_for('auth.reset_password', token=token, _external=True)
-            html = render_template('auth/reset_email.html', reset_url=reset_url, user=user)
-            subject = "Password Reset Request - Antigravity Tax"
-            msg = Message(subject, sender=current_app.config['MAIL_USERNAME'], recipients=[user.email])
-            msg.html = html
-            
-            # Send the email in the background to prevent server lag
-            Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
+        # EMAIL DISABLED FOR RENDER FREE TIER TESTING
+        flash('Automatic password resets are currently suspended during the testing phase. If you are locked out, please request an Administrator to delete and recreate your account.', 'warning')
                 
         return redirect(url_for('auth.login'))
         
@@ -221,16 +212,3 @@ def reset_password(token):
         return redirect(url_for('auth.login'))
         
     return render_template('auth/reset_password.html', token=token)
-
-@auth.route('/test_email')
-def test_email():
-    try:
-        msg = Message("Tax App Diagnostic Test", 
-                      sender=current_app.config.get('MAIL_USERNAME', 'idyessien101@gmail.com'), 
-                      recipients=[current_app.config.get('MAIL_USERNAME', 'idyessien101@gmail.com')])
-        msg.body = "If you are reading this, Render has successfully authenticated with your Google App Password!"
-        mail.send(msg)
-        return "<h1>SUCCESS!</h1><p>Render connected to Google and sent the email! Check your inbox.</p>"
-    except Exception as e:
-        import traceback
-        return f"<h1>EMAIL FAILED</h1><h3>Here is the exact hidden error stopping it:</h3><pre>{traceback.format_exc()}</pre>"
