@@ -231,6 +231,7 @@ def _calculate_business_tax(user, year):
         Income.query
         .filter(Income.user_id == user.id)
         .filter(Income.date >= start_date, Income.date <= end_date)
+        .filter(Income.is_taxable == True)
         .with_entities(func.sum(Income.amount))
         .scalar()
     ) or 0.0
@@ -307,6 +308,7 @@ def _calculate_profit(user, year):
         Income.query
         .filter(Income.user_id == user.id)
         .filter(Income.date >= start_date, Income.date <= end_date)
+        .filter(Income.is_taxable == True)
         .with_entities(func.sum(Income.amount))
         .scalar()
     ) or 0.0

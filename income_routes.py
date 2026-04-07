@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
-from models import db, Income, IncomeType, Currency
+from models import db, Income, IncomeType, Currency, ProfileType
 from datetime import datetime, timedelta
 
 from tax_logic import calculate_gross_from_net
@@ -30,14 +30,20 @@ def income_dashboard():
         # Handle "Monthly" Frequency -> Just a tag now, or we can ignore frequency as requested
         # User wants "Month by Month input", so we treat it as single entry.
         
+        inc_type_enum = IncomeType(income_type)
+        is_tax = True
+        if inc_type_enum in [IncomeType.GIFT, IncomeType.BROUGHT_FORWARD]:
+            is_tax = False
+            
         new_income = Income(
             user_id=current_user.id,
             amount=amount,
             date=income_date,
             description=description,
-            income_type=IncomeType(income_type),
+            income_type=inc_type_enum,
             currency=Currency(currency),
-            gross_vs_net="Gross" # User requested to remove Net option
+            gross_vs_net="Gross", # User requested to remove Net option
+            is_taxable=is_tax
             # frequency handled implicitly as One-Off
         )
         db.session.add(new_income)
@@ -90,9 +96,27 @@ def income_dashboard():
     # User said "Remove brought forward green dashboard in the Income tab only".
     # So we don't need to pass 'brought_forward' to template anymore, or we can leave it but not show it.
     
+    ptype = current_user.profile_type
+    if ptype == ProfileType.CORPORATION:
+        allowed_income_types = [
+            IncomeType.CORE_REVENUE, IncomeType.SUBSIDIARY_DIVIDENDS, IncomeType.CAPITAL_GAINS,
+            IncomeType.ROYALTIES_LICENSING, IncomeType.FOREX_GAINS, IncomeType.INTEREST_INCOME,
+            IncomeType.INVESTMENT, IncomeType.BROUGHT_FORWARD, IncomeType.OTHER
+        ]
+    elif ptype == ProfileType.SMALL_BUSINESS:
+        allowed_income_types = [
+            IncomeType.PRODUCT_SALES, IncomeType.SERVICE_FEES, IncomeType.RENTAL_INCOME, IncomeType.GRANTS,
+            IncomeType.INVESTMENT, IncomeType.BROUGHT_FORWARD, IncomeType.OTHER
+        ]
+    else: # INDIVIDUAL
+        allowed_income_types = [
+            IncomeType.SALARY, IncomeType.SIDE_GIG, IncomeType.GIFT, IncomeType.TERMINATION_BENEFIT,
+            IncomeType.INVESTMENT, IncomeType.BROUGHT_FORWARD, IncomeType.OTHER
+        ]
+        
     return render_template('income.html', 
                            incomes=recent_incomes, 
-                           income_types=IncomeType)
+                           income_types=allowed_income_types)
 
 @income_bp.route('/income/edit/<int:id>', methods=['POST'])
 @login_required

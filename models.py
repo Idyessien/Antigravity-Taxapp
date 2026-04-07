@@ -70,6 +70,21 @@ class IncomeType(enum.Enum):
     INVESTMENT = "Investment"
     BROUGHT_FORWARD = "Brought Forward"
     TERMINATION_BENEFIT = "Termination Benefit"
+    
+    # SME additions
+    PRODUCT_SALES = "Product Sales"
+    SERVICE_FEES = "Service Fees"
+    RENTAL_INCOME = "Rental Income"
+    GRANTS = "Grants / Subsidies"
+    
+    # Corporate additions 
+    CORE_REVENUE = "Core Operating Revenue"
+    SUBSIDIARY_DIVIDENDS = "Dividends & Subsidiary Income"
+    CAPITAL_GAINS = "Capital Gains / Disposals"
+    ROYALTIES_LICENSING = "Royalties & Licensing"
+    FOREX_GAINS = "Foreign Exchange Gains"
+    INTEREST_INCOME = "Interest Income"
+    
     OTHER = "Other"
 
 class Currency(enum.Enum):
