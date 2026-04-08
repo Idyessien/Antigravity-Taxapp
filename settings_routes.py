@@ -236,13 +236,17 @@ def expenses():
             'spent': spent,
             'is_over': (spent > limit) if limit > 0 else False
         }
+        
+    from models import Subscription
+    subscriptions = Subscription.query.filter_by(user_id=current_user.id).order_by(Subscription.next_due_date).all()
     
     return render_template('expenses.html', 
                            categories=categories, 
                            category_groups=category_groups,
                            budget_map=budget_map,
                            recent_expenses=recent_expenses,
-                           budget_status=budget_status)
+                           budget_status=budget_status,
+                           subscriptions=subscriptions)
 
 @settings_bp.route('/expenses/add', methods=['POST'])
 @login_required
@@ -392,3 +396,91 @@ def add_custom_category():
             
     return redirect(url_for('settings.expenses'))
 
+# --- SUBSCRIPTION TRACKER Endpoints ---
+
+@settings_bp.route('/subscriptions/add', methods=['POST'])
+@login_required
+def add_subscription():
+    from models import Subscription, db
+    from datetime import datetime
+    
+    name = request.form.get('name')
+    amount_str = request.form.get('amount')
+    category_id = request.form.get('category_id')
+    billing_cycle = request.form.get('billing_cycle', 'Monthly')
+    next_due_str = request.form.get('next_due_date')
+    
+    if name and amount_str and category_id and next_due_str:
+        try:
+            amount = float(amount_str)
+            next_due = datetime.strptime(next_due_str, '%Y-%m-%d').date()
+            
+            sub = Subscription(
+                user_id=current_user.id,
+                category_id=int(category_id),
+                name=name,
+                amount=amount,
+                billing_cycle=billing_cycle,
+                next_due_date=next_due
+            )
+            db.session.add(sub)
+            db.session.commit()
+            flash(f'Subscription "{name}" created successfully!')
+        except Exception as e:
+            flash(f"Error adding subscription: {str(e)}")
+            
+    return redirect(url_for('settings.expenses'))
+
+@settings_bp.route('/subscriptions/log/<int:id>', methods=['POST'])
+@login_required
+def log_subscription(id):
+    from models import Subscription, Expense, db
+    from datetime import datetime
+    
+    sub = Subscription.query.get_or_404(id)
+    if sub.user_id != current_user.id:
+        flash("Unauthorized")
+        return redirect(url_for('settings.expenses'))
+        
+    # 1. Create the Expense
+    exp = Expense(
+        user_id=current_user.id,
+        category_id=sub.category_id,
+        amount=sub.amount,
+        description=f"Subscription: {sub.name}",
+        date=datetime.utcnow()
+    )
+    db.session.add(exp)
+    
+    # 2. Push the due date forward logically
+    try:
+        from dateutil.relativedelta import relativedelta
+        if sub.billing_cycle == 'Monthly':
+            sub.next_due_date = sub.next_due_date + relativedelta(months=1)
+        elif sub.billing_cycle == 'Yearly':
+            sub.next_due_date = sub.next_due_date + relativedelta(years=1)
+        elif sub.billing_cycle == 'Weekly':
+            sub.next_due_date = sub.next_due_date + relativedelta(weeks=1)
+    except ImportError:
+        from datetime import timedelta
+        if sub.billing_cycle == 'Monthly':
+            sub.next_due_date = sub.next_due_date + timedelta(days=30)
+        elif sub.billing_cycle == 'Yearly':
+            sub.next_due_date = sub.next_due_date + timedelta(days=365)
+        elif sub.billing_cycle == 'Weekly':
+            sub.next_due_date = sub.next_due_date + timedelta(days=7)
+            
+    db.session.commit()
+    flash(f'Logged {sub.name} subscription! Next due date pushed to {sub.next_due_date}.')
+    return redirect(url_for('settings.expenses'))
+
+@settings_bp.route('/subscriptions/delete/<int:id>')
+@login_required
+def delete_subscription(id):
+    from models import Subscription, db
+    sub = Subscription.query.get_or_404(id)
+    if sub.user_id == current_user.id:
+        db.session.delete(sub)
+        db.session.commit()
+        flash('Subscription removed.')
+    return redirect(url_for('settings.expenses'))

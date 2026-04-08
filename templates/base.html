@@ -164,6 +164,103 @@
                 {% block content %}{% endblock %}
             </div>
         </div>
+        
+        <!-- Global Quick Add FAB -->
+        <button class="btn btn-primary shadow-lg" 
+                style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; font-size: 28px; z-index: 1050; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;"
+                onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"
+                data-bs-toggle="modal" data-bs-target="#quickAddModal">
+            <i class="bi bi-plus"></i>
+        </button>
+
+        <!-- Quick Add Modal -->
+        <div class="modal fade" id="quickAddModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header border-0 bg-primary text-white" style="border-radius: 0.5rem 0.5rem 0 0;">
+                        <h5 class="modal-title fw-bold"><i class="bi bi-lightning-fill"></i> Quick Entry</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <ul class="nav nav-pills nav-fill mb-4" id="quickAddTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active fw-bold border" id="expense-tab" data-bs-toggle="pill" data-bs-target="#quick-expense" type="button" role="tab">Expense</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-bold border ms-2" id="income-tab" data-bs-toggle="pill" data-bs-target="#quick-income" type="button" role="tab">Income</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="quickAddTabsContent">
+                            <!-- Expense Form -->
+                            <div class="tab-pane fade show active" id="quick-expense" role="tabpanel">
+                                <form action="{{ url_for('settings.add_expense') }}" method="POST">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Amount</label>
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-light border-end-0">₦</span>
+                                            <input type="text" name="amount" class="form-control border-start-0 currency-input fw-bold" placeholder="0.00" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Category</label>
+                                        <select name="category_id" class="form-select" required>
+                                            {% for c in global_expense_categories %}
+                                            <option value="{{ c.id }}">{{ EMOJI_MAP.get(c.group, '🛒') }} {{ c.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-4 row">
+                                        <div class="col-6">
+                                            <label class="form-label text-muted small fw-bold">Date</label>
+                                            <input type="date" name="date" class="form-control quick-add-date" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label text-muted small fw-bold">Note</label>
+                                            <input type="text" name="description" class="form-control" placeholder="Optional">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold rounded-pill">Log Expense</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Income Form -->
+                            <div class="tab-pane fade" id="quick-income" role="tabpanel">
+                                <form action="{{ url_for('income.income_dashboard') }}" method="POST">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Amount</label>
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-light border-end-0">₦</span>
+                                            <input type="text" name="amount" class="form-control border-start-0 currency-input fw-bold text-success" placeholder="0.00" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Source</label>
+                                        <select name="income_type" class="form-select" required>
+                                            {% for type in global_income_types %}
+                                            <option value="{{ type.value }}">{{ type.value }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-4 row">
+                                        <div class="col-6">
+                                            <label class="form-label text-muted small fw-bold">Date</label>
+                                            <input type="date" name="date" class="form-control quick-add-date" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label text-muted small fw-bold">Note</label>
+                                            <input type="text" name="description" class="form-control" placeholder="Optional">
+                                        </div>
+                                        <input type="hidden" name="currency" value="NGN">
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold rounded-pill">Log Income</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
     {% else %}
     <!-- Login/Register Layout (Centered) -->
@@ -252,7 +349,11 @@
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl)
-            })
+            });
+
+            // Pre-fill quick add dates with today's date
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('.quick-add-date').forEach(el => el.value = todayStr);
         });
     </script>
 </body>

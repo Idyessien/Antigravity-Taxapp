@@ -67,6 +67,64 @@ def inject_announcement():
     except:
         return dict(active_announcement=None)
 
+@app.context_processor
+def inject_quick_add_data():
+    from flask_login import current_user
+    try:
+        from models import IncomeType, ProfileType, Category, CategoryTarget
+        if current_user.is_authenticated:
+            ptype = current_user.profile_type
+            if ptype == ProfileType.CORPORATION:
+                allowed_income_types = [
+                    IncomeType.CORE_REVENUE, IncomeType.SUBSIDIARY_DIVIDENDS, IncomeType.CAPITAL_GAINS,
+                    IncomeType.ROYALTIES_LICENSING, IncomeType.FOREX_GAINS, IncomeType.INTEREST_INCOME,
+                    IncomeType.INVESTMENT, IncomeType.BROUGHT_FORWARD, IncomeType.OTHER
+                ]
+            elif ptype == ProfileType.SMALL_BUSINESS:
+                allowed_income_types = [
+                    IncomeType.PRODUCT_SALES, IncomeType.SERVICE_FEES, IncomeType.RENTAL_INCOME, IncomeType.GRANTS,
+                    IncomeType.INVESTMENT, IncomeType.BROUGHT_FORWARD, IncomeType.OTHER
+                ]
+            else: # INDIVIDUAL
+                allowed_income_types = [
+                    IncomeType.SALARY, IncomeType.SIDE_GIG, IncomeType.GIFT, IncomeType.TERMINATION_BENEFIT,
+                    IncomeType.INVESTMENT, IncomeType.BROUGHT_FORWARD, IncomeType.OTHER
+                ]
+            
+            sys_cats = Category.query.filter_by(user_id=None).all()
+            user_cats = Category.query.filter_by(user_id=current_user.id).all()
+            unique_cats = {c.name.lower(): c for c in (sys_cats + user_cats)}.values()
+            
+            final_cats = []
+            for c in unique_cats:
+                if c.target_profile == CategoryTarget.BOTH:
+                    final_cats.append(c)
+                elif c.target_profile == CategoryTarget.BUSINESS and ptype != ProfileType.INDIVIDUAL:
+                    final_cats.append(c)
+                elif c.target_profile == CategoryTarget.INDIVIDUAL and ptype == ProfileType.INDIVIDUAL:
+                    final_cats.append(c)
+            sorted_cats = sorted(final_cats, key=lambda x: (x.group or "Other", x.name))
+            
+            EMOJI_MAP = {
+                "Housing": "🏠",
+                "Transportation": "🚗",
+                "Utilities": "💡",
+                "Household & Food": "🍔",
+                "Health & Medical": "💊",
+                "Investment": "📈",
+                "Facility": "🏢",
+                "HR": "👥",
+                "Compliance": "⚖️",
+                "Operations": "⚙️",
+                "Governance": "🏛️",
+                "Other": "🛒"
+            }
+            
+            return dict(global_income_types=allowed_income_types, global_expense_categories=sorted_cats, EMOJI_MAP=EMOJI_MAP)
+    except:
+        pass
+    return {}
+
 @app.route('/initdb')
 def initdb():
     try:

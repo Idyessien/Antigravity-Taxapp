@@ -8,6 +8,9 @@
             <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#customCatModal">
                 <i class="bi bi-folder-plus"></i> New Category
             </button>
+            <button class="btn btn-outline-info me-2" data-bs-toggle="modal" data-bs-target="#addSubscriptionModal">
+                <i class="bi bi-calendar-check text-info"></i> Subscribe
+            </button>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logExpenseModal">
                 <i class="bi bi-wallet2"></i> Log Expense
             </button>
@@ -52,6 +55,51 @@
         </div>
     </div>
 
+    <!-- Expense Breakdown Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0" style="border-radius: 16px;">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill text-primary"></i> Spend Breakdown</h5>
+                    <div style="height: 250px; display: flex; justify-content: center;">
+                        <canvas id="expenseDoughnut"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription Tracker -->
+    {% if subscriptions %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="fw-bold mb-3"><i class="bi bi-calendar-event-fill text-info"></i> Upcoming Subscriptions</h5>
+            <div class="d-flex overflow-auto pb-2" style="white-space: nowrap; -ms-overflow-style: none; scrollbar-width: none;">
+                {% for sub in subscriptions %}
+                <div class="card shadow-sm me-3 flex-shrink-0" style="min-width: 280px; border-radius: 12px; border-left: 4px solid var(--primary-color);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title fw-bold mb-0">{{ EMOJI_MAP.get(sub.category.group, '🛒') }} {{ sub.name }}</h6>
+                            <span class="badge bg-light text-dark shadow-sm">{{ sub.billing_cycle }}</span>
+                        </div>
+                        <h5 class="text-danger mb-1">₦{{ "{:,.2f}".format(sub.amount) }}</h5>
+                        <p class="mb-3 text-muted small"><i class="bi bi-clock"></i> Due: {{ sub.next_due_date.strftime('%d-%m-%Y') }}</p>
+                        
+                        <div class="d-flex justify-content-between">
+                            <form action="{{ url_for('settings.log_subscription', id=sub.id) }}" method="POST" class="d-inline border-0 p-0 m-0 w-75">
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-check-circle"></i> Log Payment</button>
+                            </form>
+                            <a href="{{ url_for('settings.delete_subscription', id=sub.id) }}" class="btn btn-sm btn-outline-danger ms-2"><i class="bi bi-trash"></i></a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <style> /* Hide scrollbar for carousel */ .overflow-auto::-webkit-scrollbar { display: none; } </style>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Recent Expenses List -->
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-white">
@@ -73,7 +121,9 @@
                     <tr>
                         <td>{{ exp.date.strftime('%d-%m-%Y') }}</td>
                         <td>
-                            {{ exp.category.name }}
+                            <span class="badge" style="background-color: #f8f9fa; color: #495057; font-size: 0.85em; font-weight: 500; border: 1px solid #e9ecef;">
+                                {{ EMOJI_MAP.get(exp.category.group, '🛒') }} {{ exp.category.name }}
+                            </span>
                             {% if budget_status[exp.category_id].is_over %}
                             <span class="text-danger ms-1" title="Over Budget!" data-bs-toggle="tooltip">
                                 <i class="bi bi-exclamation-triangle-fill"></i>
@@ -115,7 +165,7 @@
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapse{{ loop.index }}" aria-expanded="false"
                         aria-controls="collapse{{ loop.index }}">
-                        <strong>{{ group }}</strong>
+                        <strong>{{ EMOJI_MAP.get(group, '🛒') }} {{ group }}</strong>
                     </button>
                 </h2>
                 <div id="collapse{{ loop.index }}" class="accordion-collapse collapse"
@@ -133,7 +183,7 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex flex-column">
-                                            <span>{{ cat.name }}</span>
+                                            <span class="fw-bold">{{ EMOJI_MAP.get(cat.group, '🛒') }} {{ cat.name }}</span>
                                             <div class="mt-1">
                                                 {% if "Rent" in cat.name %}
                                                 <span class="badge bg-success bg-opacity-75"
@@ -238,7 +288,7 @@
                         <label>Category</label>
                         <select name="category_id" class="form-select" required>
                             {% for cat in categories %}
-                            <option value="{{ cat.id }}">{{ cat.group }} - {{ cat.name }}</option>
+                            <option value="{{ cat.id }}">{{ EMOJI_MAP.get(cat.group, '🛒') }} {{ cat.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -287,6 +337,113 @@
     document.addEventListener('DOMContentLoaded', function () {
         const val = document.querySelector('select[name="date_range"]').value;
         toggleCustomDates(val);
+        
+        // Render Chart.js Spend Breakdown
+        const ctx = document.getElementById('expenseDoughnut').getContext('2d');
+        const labels = [];
+        const data = [];
+        const bgColors = ['#ef4444', '#f97316', '#eab308', '#10b981', '#14b8a6', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899'];
+        
+        {% for cat in categories %}
+            {% set spent = budget_status[cat.id].spent %}
+            {% if spent > 0 %}
+                labels.push("{{ EMOJI_MAP.get(cat.group, '🛒') }} {{ cat.name }}");
+                data.push({{ spent }});
+            {% endif %}
+        {% endfor %}
+        
+        if(data.length === 0){
+            labels.push("No Data Yet");
+            data.push(1);
+            bgColors[0] = '#f1f5f9';
+        }
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: bgColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: { position: 'right', labels: { usePointStyle: true, padding: 20, font: { family: "'Segoe UI', sans-serif", size: 12 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed !== null) {
+                                    label += new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(context.parsed);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
     });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Add Subscription Modal -->
+<div class="modal fade" id="addSubscriptionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-calendar-plus text-primary"></i> Track New Subscription</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('settings.add_subscription') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Service Name (e.g., Netflix, Gym)</label>
+                        <input type="text" name="name" class="form-control" required placeholder="Service Name">
+                    </div>
+                    <div class="mb-3">
+                        <label>Amount (₦)</label>
+                        <input type="number" step="0.01" name="amount" class="form-control" required placeholder="0.00">
+                    </div>
+                    <div class="mb-3">
+                        <label>Expenses Category</label>
+                        <select name="category_id" class="form-select" required>
+                            {% for group in category_groups %}
+                            <optgroup label="{{ group or 'Other' }}">
+                                {% for cat in categories if cat.group == group %}
+                                <option value="{{ cat.id }}">{{ EMOJI_MAP.get(cat.group, '🛒') }} {{ cat.name }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Billing Cycle</label>
+                        <select name="billing_cycle" class="form-select">
+                            <option value="Monthly">Monthly</option>
+                            <option value="Yearly">Yearly</option>
+                            <option value="Weekly">Weekly</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Next Due Date</label>
+                        <input type="date" name="next_due_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Subscription</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

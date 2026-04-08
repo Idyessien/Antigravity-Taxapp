@@ -67,7 +67,7 @@ def seed_categories():
             
             # Compliance & Gov
             {"name": "CAC Filing Fees", "group": "Compliance", "target": CategoryTarget.BUSINESS},
-            {"name": "FIRS/LIRS Tax Payments", "group": "Compliance", "target": CategoryTarget.BUSINESS},
+            {"name": "FIRS/State Tax Payments", "group": "Compliance", "target": CategoryTarget.BUSINESS},
             {"name": "Levies & LG Charges", "group": "Compliance", "target": CategoryTarget.BUSINESS},
             
             # Operations

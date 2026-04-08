@@ -128,17 +128,22 @@
 
     <!-- 3. Financial Analytics (Charts) -->
     <div class="row">
-        <div class="col-12">
-            <h5 class="mb-3">Analytics</h5>
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <canvas id="expenseChart" style="max-height: 300px;"></canvas>
-                        </div>
-                        <div class="col-md-6">
-                            <canvas id="compChart" style="max-height: 300px;"></canvas>
-                        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100 border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-muted mb-4 fw-bold">Expenses Breakdown</h5>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100 border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-muted mb-4 fw-bold">Cash Flow Overview</h5>
+                    <div style="height: 300px; position: relative; display: flex; justify-content: center;">
+                        <canvas id="compChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -160,6 +165,12 @@
 
     // Expense Chart
     const ctxExp = document.getElementById('expenseChart').getContext('2d');
+    
+    // Create subtle gradient
+    let gradientExp = ctxExp.createLinearGradient(0, 0, 0, 400);
+    gradientExp.addColorStop(0, 'rgba(54, 162, 235, 0.8)');
+    gradientExp.addColorStop(1, 'rgba(54, 162, 235, 0.2)');
+
     new Chart(ctxExp, {
         type: 'bar',
         data: {
@@ -167,14 +178,39 @@
             datasets: [{
                 label: 'Expenses',
                 data: expenseValues,
-                backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                backgroundColor: gradientExp,
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false,
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 1500,
+                easing: 'easeOutQuart'
+            },
             plugins: {
                 legend: { display: false },
-                title: { display: true, text: 'Expenses by Category' }
+                tooltip: {
+                    callbacks: {
+                        label: function(context) { return formatCurrency(context.raw); }
+                    },
+                    padding: 10,
+                    cornerRadius: 8,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { borderDash: [5, 5], color: '#e9ecef', drawBorder: false },
+                    ticks: { callback: function(value) { return '₦' + value.toLocaleString(); } }
+                },
+                x: {
+                    grid: { display: false }
+                }
             }
         }
     });
@@ -187,13 +223,28 @@
             labels: compLabels,
             datasets: [{
                 data: compValues,
-                backgroundColor: ['#198754', '#dc3545', '#0dcaf0']
+                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                borderWidth: 0,
+                hoverOffset: 6
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            animation: {
+                animateScale: true,
+                duration: 1200
+            },
             plugins: {
-                title: { display: true, text: 'Monthly Cash Flow' }
+                legend: { position: 'bottom', labels: { padding: 20, font: { weight: 'bold' } } },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) { return ' ' + formatCurrency(context.raw); }
+                    },
+                    padding: 10,
+                    cornerRadius: 8
+                }
             }
         }
     });

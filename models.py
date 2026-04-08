@@ -279,6 +279,8 @@ class InvoiceItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
     
+
+    
     description = db.Column(db.String(200), nullable=False)
     quantity = db.Column(db.Integer, default=1)
     unit_price = db.Column(db.Float, nullable=False)
@@ -301,3 +303,18 @@ class Announcement(db.Model):
     message = db.Column(db.Text, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Subscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
+    
+    name = db.Column(db.String(100), nullable=False) # e.g. Netflix, Gym
+    amount = db.Column(db.Float, nullable=False)
+    billing_cycle = db.Column(db.String(20), default="Monthly") # Monthly, Yearly, Weekly
+    next_due_date = db.Column(db.Date, nullable=False)
+    
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    category = db.relationship('Category')
