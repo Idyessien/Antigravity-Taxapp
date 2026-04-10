@@ -106,18 +106,54 @@ def inject_quick_add_data():
             sorted_cats = sorted(final_cats, key=lambda x: (x.group or "Other", x.name))
             
             EMOJI_MAP = {
+                # Specific Items
+                "Electricity": "⚡",
+                "Electricity (Office)": "⚡",
+                "Water": "💧",
+                "Cooking Gas": "🔥",
+                "Cable TV/ Streaming": "📺",
+                "Internet/ Data": "🌐",
+                "Internet/Data (Office)": "🌐",
+                "School Fees/Creche": "🎓",
+                "Food": "🍔",
+                "Clothing & Personal self care": "👕",
+                "Toiletries": "🧻",
+                "Gifts": "🎁",
+                "Tithe/Charity": "🤝",
+                "Subscription Services (icloud, apps etc)": "📱",
+                "Software & Subscriptions": "💻",
+                "Gym Membership": "🏋️",
+                "Health Insurance": "🏥",
+                "Medical Expenses (Prescriptions etc)": "💊",
+                "Petrol/Diesel (Vehicle)": "⛽",
+                "Diesel/Fuel (Generator/Vehicle)": "⛽",
+                "Public Transport (Danfo, BRT, Keke)": "🚌",
+                "Car license and Insurance": "📄",
+                "Ride-Hailing (Uber, Bolt, Indrive etc)": "🚕",
+                "Vehicle Maintenance": "🔧",
+                "Rent (Annual/Monthly)": "🏡",
+                "Office Rent": "🏢",
+                "Estate/Security Dues": "👮",
+                "Land Use Charge / Tenement Rate": "📜",
+                "Investments & Savings": "📈",
+                "Salaries & Wages": "💸",
+                "Staff Training": "📉",
+                "Pension Contribution (Employer)": "🏦",
+                "Office Supplies & Consumables": "📎",
+                
+                # Group Fallbacks
                 "Housing": "🏠",
                 "Transportation": "🚗",
                 "Utilities": "💡",
-                "Household & Food": "🍔",
-                "Health & Medical": "💊",
+                "Household & Food": "🛍️",
+                "Health & Medical": "⚕️",
                 "Investment": "📈",
                 "Facility": "🏢",
                 "HR": "👥",
                 "Compliance": "⚖️",
                 "Operations": "⚙️",
                 "Governance": "🏛️",
-                "Other": "🛒"
+                "Other": "🏷️"
             }
             
             return dict(global_income_types=allowed_income_types, global_expense_categories=sorted_cats, EMOJI_MAP=EMOJI_MAP)

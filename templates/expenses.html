@@ -79,7 +79,7 @@
                 <div class="card shadow-sm me-3 flex-shrink-0" style="min-width: 280px; border-radius: 12px; border-left: 4px solid var(--primary-color);">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="card-title fw-bold mb-0">{{ EMOJI_MAP.get(sub.category.group, '🛒') }} {{ sub.name }}</h6>
+                            <h6 class="card-title fw-bold mb-0">{{ EMOJI_MAP.get(sub.category.name, EMOJI_MAP.get(sub.category.group, '🏷️')) }} {{ sub.name }}</h6>
                             <span class="badge bg-light text-dark shadow-sm">{{ sub.billing_cycle }}</span>
                         </div>
                         <h5 class="text-danger mb-1">₦{{ "{:,.2f}".format(sub.amount) }}</h5>
@@ -122,7 +122,7 @@
                         <td>{{ exp.date.strftime('%d-%m-%Y') }}</td>
                         <td>
                             <span class="badge" style="background-color: #f8f9fa; color: #495057; font-size: 0.85em; font-weight: 500; border: 1px solid #e9ecef;">
-                                {{ EMOJI_MAP.get(exp.category.group, '🛒') }} {{ exp.category.name }}
+                                {{ EMOJI_MAP.get(exp.category.name, EMOJI_MAP.get(exp.category.group, '🏷️')) }} {{ exp.category.name }}
                             </span>
                             {% if budget_status[exp.category_id].is_over %}
                             <span class="text-danger ms-1" title="Over Budget!" data-bs-toggle="tooltip">
@@ -165,7 +165,7 @@
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapse{{ loop.index }}" aria-expanded="false"
                         aria-controls="collapse{{ loop.index }}">
-                        <strong>{{ EMOJI_MAP.get(group, '🛒') }} {{ group }}</strong>
+                        <strong>{{ EMOJI_MAP.get(group, '🏷️') }} {{ group }}</strong>
                     </button>
                 </h2>
                 <div id="collapse{{ loop.index }}" class="accordion-collapse collapse"
@@ -183,7 +183,7 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex flex-column">
-                                            <span class="fw-bold">{{ EMOJI_MAP.get(cat.group, '🛒') }} {{ cat.name }}</span>
+                                            <span class="fw-bold">{{ EMOJI_MAP.get(cat.name, EMOJI_MAP.get(cat.group, '🏷️')) }} {{ cat.name }}</span>
                                             <div class="mt-1">
                                                 {% if "Rent" in cat.name %}
                                                 <span class="badge bg-success bg-opacity-75"
@@ -288,7 +288,7 @@
                         <label>Category</label>
                         <select name="category_id" class="form-select" required>
                             {% for cat in categories %}
-                            <option value="{{ cat.id }}">{{ EMOJI_MAP.get(cat.group, '🛒') }} {{ cat.name }}</option>
+                            <option value="{{ cat.id }}">{{ EMOJI_MAP.get(cat.name, EMOJI_MAP.get(cat.group, '🏷️')) }} {{ cat.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -347,7 +347,7 @@
         {% for cat in categories %}
             {% set spent = budget_status[cat.id].spent %}
             {% if spent > 0 %}
-                labels.push("{{ EMOJI_MAP.get(cat.group, '🛒') }} {{ cat.name }}");
+                labels.push("{{ EMOJI_MAP.get(cat.name, EMOJI_MAP.get(cat.group, '🏷️')) }} {{ cat.name }}");
                 data.push({{ spent }});
             {% endif %}
         {% endfor %}
@@ -418,7 +418,7 @@
                             {% for group in category_groups %}
                             <optgroup label="{{ group or 'Other' }}">
                                 {% for cat in categories if cat.group == group %}
-                                <option value="{{ cat.id }}">{{ EMOJI_MAP.get(cat.group, '🛒') }} {{ cat.name }}</option>
+                                <option value="{{ cat.id }}">{{ EMOJI_MAP.get(cat.name, EMOJI_MAP.get(cat.group, '🏷️')) }} {{ cat.name }}</option>
                                 {% endfor %}
                             </optgroup>
                             {% endfor %}
