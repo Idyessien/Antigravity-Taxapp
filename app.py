@@ -14,18 +14,18 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key')
 
-# Multi-path template loader: enables Flask to seamlessly find templates in templates/, root, or admin/
+# Multi-path template loader: Checks root first so newly deployed root files take immediate precedence over older subfolders
 template_dirs = [
-    os.path.join(basedir, 'templates'),
     basedir,
-    os.path.join(basedir, 'templates', 'admin'),
     os.path.join(basedir, 'admin'),
+    os.path.join(basedir, 'templates'),
+    os.path.join(basedir, 'templates', 'admin'),
     os.path.join(basedir, 'templates', 'auth'),
     os.path.join(basedir, 'auth'),
     os.path.join(basedir, 'templates', 'business'),
     os.path.join(basedir, 'business')
 ]
-app.jinja_loader = ChoiceLoader([FileSystemLoader(d) for d in template_dirs if os.path.exists(d)] + [FileSystemLoader(os.path.join(basedir, 'templates')), FileSystemLoader(basedir)])
+app.jinja_loader = ChoiceLoader([FileSystemLoader(d) for d in template_dirs if os.path.exists(d)] + [FileSystemLoader(basedir), FileSystemLoader(os.path.join(basedir, 'templates'))])
 
 # Mail Configuration
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')

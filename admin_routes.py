@@ -12,6 +12,20 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 AUTHORIZED_ADMIN_EMAIL = "idyessien101@gmail.com"
 
+def render_admin_view(view_name, **context):
+    """Fallback-resilient renderer that checks admin/name.html, admin_name.html, and name.html."""
+    candidates = [
+        f"admin/{view_name}.html",
+        f"admin_{view_name}.html",
+        f"{view_name}.html"
+    ]
+    for c in candidates:
+        try:
+            return render_template(c, **context)
+        except Exception:
+            continue
+    return render_template(f"admin/{view_name}.html", **context)
+
 def log_admin_action(action, target_user=None, details=None):
     """Utility to record admin and support operations into the Audit Trail."""
     try:
@@ -69,7 +83,7 @@ def admin_login():
         # Strict gate: Only idyessien101@gmail.com can log in as Admin
         if email != AUTHORIZED_ADMIN_EMAIL.lower():
             flash("Access denied. Only the authorized master administrator can log in here.", "danger")
-            return render_template('admin/login.html')
+            return render_admin_view('login')
         
         user = User.query.filter_by(email=email).first()
         if user:
@@ -96,7 +110,7 @@ def admin_login():
             flash("Admin account not found. Please register your master admin account first.", "warning")
             return redirect(url_for('admin.admin_register'))
             
-    return render_template('admin/login.html')
+    return render_admin_view('login')
 
 @admin_bp.route('/register', methods=['GET', 'POST'])
 def admin_register():
@@ -111,11 +125,11 @@ def admin_register():
         # Strict gate: Only idyessien101@gmail.com can register as Admin
         if email != AUTHORIZED_ADMIN_EMAIL.lower():
             flash("Registration restricted: Only idyessien101@gmail.com is authorized to register as an Administrator.", "danger")
-            return render_template('admin/register.html', allowed_email=AUTHORIZED_ADMIN_EMAIL)
+            return render_admin_view('register', allowed_email=AUTHORIZED_ADMIN_EMAIL)
         
         if len(password) < 6:
             flash("Password must be at least 6 characters long.", "warning")
-            return render_template('admin/register.html', allowed_email=AUTHORIZED_ADMIN_EMAIL)
+            return render_admin_view('register', allowed_email=AUTHORIZED_ADMIN_EMAIL)
             
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
         
@@ -150,7 +164,7 @@ def admin_register():
             
         return redirect(url_for('admin.admin_login'))
         
-    return render_template('admin/register.html', allowed_email=AUTHORIZED_ADMIN_EMAIL)
+    return render_admin_view('register', allowed_email=AUTHORIZED_ADMIN_EMAIL)
 
 @admin_bp.route('/logout')
 def admin_logout():
@@ -291,8 +305,8 @@ def dashboard():
             'banks': inspect_user.bank_connections
         }
 
-    return render_template(
-        'admin/dashboard.html',
+    return render_admin_view(
+        'dashboard',
         # Active Tab
         active_tab=active_tab,
         # Module 1
