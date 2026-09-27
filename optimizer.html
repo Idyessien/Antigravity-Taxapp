@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Investment Tax Optimizer (Pro)</h2>
+    <p>Calculate your Tax Equivalent Yield (TEY) to compare tax-free assets (like FGN Bonds) with taxable ones.</p>
+
+    <div class="card col-md-6 mx-auto">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label>Tax Free Yield (%)</label>
+                    <input type="number" step="0.01" name="yield" class="form-control" placeholder="e.g. 12.5" required>
+                </div>
+                <div class="mb-3">
+                    <label>Your Marginal Tax Bracket (%)</label>
+                    <input type="number" step="0.01" name="tax_bracket" class="form-control" placeholder="e.g. 25"
+                        required>
+                </div>
+                <button type="submit" class="btn btn-success w-100">Calculate TEY</button>
+            </form>
+
+            {% if tey_result %}
+            <div class="alert alert-success mt-3 text-center">
+                <h4>Tax Equivalent Yield: {{ "{:,.2f}".format(tey_result) }}%</h4>
+                <p>A taxable investment would need to pay <strong>{{ "{:,.2f}".format(tey_result) }}%</strong> to match
+                    this tax-free
+                    return.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

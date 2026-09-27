@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaxOnTheGo - Smart Nigerian Tax & Wealth Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+
+<body
+    data-theme="{{ current_user.settings.theme if current_user.is_authenticated and current_user.settings else 'light' }}">
+
+    <!-- Impersonation Security Banner -->
+    {% if session.get('impersonating_admin_id') %}
+    <div class="bg-warning text-dark text-center py-2 fw-bold shadow-sm" style="position: sticky; top: 0; z-index: 1050; border-bottom: 3px solid #ffcc00;">
+        <i class="bi bi-shield-shaded text-danger me-2"></i> 
+        <span>Support Mode: You are viewing as <strong>{{ current_user.email }}</strong> (Read-Only Diagnostics)</span>
+        <form action="{{ url_for('admin.revert_impersonation') }}" method="POST" class="d-inline ms-3">
+            <button type="submit" class="btn btn-sm btn-dark fw-bold px-3 shadow-sm">
+                <i class="bi bi-box-arrow-left me-1"></i> Return to Admin Control Center
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Global Announcements Banner -->
+    {% if active_announcement %}
+    <div class="bg-info text-white text-center py-2 px-3 fw-bold" style="position: relative; z-index: 1040; background: linear-gradient(90deg, #0d6efd, #0dcaf0);">
+        <i class="bi bi-megaphone-fill me-2"></i> {{ active_announcement.message }}
+    </div>
+    {% endif %}
+    {% if current_user.is_authenticated %}
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <div class="d-flex align-items-center mb-1">
+                    <div class="logo-circle">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 18V6L18 18V6" stroke="white" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M4 10H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                            <path d="M4 14H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <h3 class="fw-bold mb-0">TaxOnTheGo</h3>
+                </div>
+                <small class="text-muted d-block" style="font-size: 0.75rem; line-height: 1.2;">Your money. Your taxes.
+                    Made simple.</small>
+            </div>
+
+            <ul class="list-unstyled components">
+                <li>
+                    <a href="{{ url_for('main.dashboard') }}"
+                        class="{{ 'active' if request.endpoint == 'main.dashboard' }}">
+                        <i class="bi bi-grid-fill"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('income.income_dashboard') }}"
+                        class="{{ 'active' if request.endpoint == 'income.income_dashboard' }}">
+                        <i class="bi bi-wallet2"></i> Income
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('settings.expenses') }}"
+                        class="{{ 'active' if request.endpoint == 'settings.expenses' }}">
+                        <i class="bi bi-receipt"></i> Expenses
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('investment.wealth_dashboard') }}"
+                        class="{{ 'active' if 'investment' in request.endpoint }}">
+                        <i class="bi bi-piggy-bank"></i> Wealth
+                    </a>
+                </li>
+
+                {% if current_user.profile_type.name != 'INDIVIDUAL' %}
+                <li>
+                    <a href="#bizSubmenu" data-bs-toggle="collapse" class="dropdown-toggle">
+                        <i class="bi bi-briefcase"></i> Business
+                    </a>
+                    <ul class="collapse list-unstyled ps-4" id="bizSubmenu">
+                        <li><a href="{{ url_for('business.debtors') }}">Debtors</a></li>
+                        <li><a href="{{ url_for('business.invoices') }}">Invoices</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+
+                <li>
+                    <a href="#compSubmenu" data-bs-toggle="collapse" class="dropdown-toggle">
+                        <i class="bi bi-shield-check"></i> Compliance
+                    </a>
+                    <ul class="collapse list-unstyled ps-4" id="compSubmenu">
+                        <li><a href="{{ url_for('compliance.vault') }}">Vault</a></li>
+                        <li><a href="{{ url_for('compliance.calendar') }}">Calendar</a></li>
+                        <li><a href="{{ url_for('wht.tax_liability') }}">Tax Liability</a></li>
+                    </ul>
+                </li>
+
+                {% if current_user.is_admin and current_user.email.lower() == 'idyessien101@gmail.com' %}
+                <li>
+                    <a href="{{ url_for('admin.dashboard') }}"
+                        class="{{ 'active' if 'admin' in request.endpoint }}">
+                        <i class="bi bi-shield-lock-fill text-danger"></i> Admin Control Center
+                    </a>
+                </li>
+                {% endif %}
+
+                <li>
+                    <a href="{{ url_for('settings.settings') }}"
+                        class="{{ 'active' if request.endpoint == 'settings.settings' }}">
+                        <i class="bi bi-gear"></i> Settings
+                    </a>
+                </li>
+            </ul>
+
+            <div class="mt-auto p-4">
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger w-100 btn-sm">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+        </nav>
+
+        <!-- Page Content -->
+        <div id="content">
+            <nav class="navbar navbar-expand-lg top-navbar">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-light d-md-none">
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                    <div class="ms-auto d-flex align-items-center">
+                        <button type="button" class="btn btn-primary rounded-pill px-3 py-1 me-3 d-flex align-items-center shadow-sm" data-bs-toggle="modal" data-bs-target="#quickAddModal">
+                            <i class="bi bi-plus-lg me-1 fw-bold"></i> Quick Add
+                        </button>
+                        <div class="dropdown">
+                            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark"
+                                id="userMenu" data-bs-toggle="dropdown">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                                    style="width: 32px; height: 32px;">
+                                    {{ current_user.email[0].upper() }}
+                                </div>
+                                <span class="d-none d-md-inline">{{ current_user.email }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                {% if current_user.is_admin and current_user.email.lower() == 'idyessien101@gmail.com' %}
+                                <li><a class="dropdown-item text-danger fw-bold" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-shield-lock-fill me-2"></i>Admin Center</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{{ url_for('settings.settings') }}">Profile & Settings</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">Logout</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="container-fluid p-4">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show"
+                    role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+        <!-- Global Quick Add Modal -->
+        <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content shadow-lg border-0" style="border-radius: 1rem;">
+                    <div class="modal-header border-0 bg-primary text-white" style="border-radius: 0.5rem 0.5rem 0 0;">
+                        <h5 class="modal-title fw-bold"><i class="bi bi-lightning-fill"></i> Quick Entry</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <ul class="nav nav-pills nav-fill mb-4" id="quickAddTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active fw-bold border" id="expense-tab" data-bs-toggle="pill" data-bs-target="#quick-expense" type="button" role="tab">Expense</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-bold border ms-2" id="income-tab" data-bs-toggle="pill" data-bs-target="#quick-income" type="button" role="tab">Income</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="quickAddTabsContent">
+                            <!-- Expense Form -->
+                            <div class="tab-pane fade show active" id="quick-expense" role="tabpanel">
+                                <form action="{{ url_for('settings.add_expense') }}" method="POST">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Amount</label>
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-light border-end-0">₦</span>
+                                            <input type="text" name="amount" class="form-control border-start-0 currency-input fw-bold" placeholder="0.00" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Category</label>
+                                        <select name="category_id" class="form-select" required>
+                                            {% for c in global_expense_categories %}
+                                            <option value="{{ c.id }}">{{ EMOJI_MAP.get(c.name, EMOJI_MAP.get(c.group, '🏷️')) }} {{ c.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-4 row">
+                                        <div class="col-6">
+                                            <label class="form-label text-muted small fw-bold">Date</label>
+                                            <input type="date" name="date" class="form-control quick-add-date" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label text-muted small fw-bold">Note</label>
+                                            <input type="text" name="description" class="form-control" placeholder="Optional">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold rounded-pill">Log Expense</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Income Form -->
+                            <div class="tab-pane fade" id="quick-income" role="tabpanel">
+                                <form action="{{ url_for('income.income_dashboard') }}" method="POST">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Amount</label>
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-light border-end-0">₦</span>
+                                            <input type="text" name="amount" class="form-control border-start-0 currency-input fw-bold" placeholder="0.00" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Income Type / Source</label>
+                                        <select name="income_type" class="form-select" required>
+                                            {% for itype in global_income_types %}
+                                            <option value="{{ itype.value }}">{{ itype.value }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-4 row">
+                                        <div class="col-6">
+                                            <label class="form-label text-muted small fw-bold">Date</label>
+                                            <input type="date" name="date" class="form-control quick-add-date" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label text-muted small fw-bold">Note</label>
+                                            <input type="text" name="description" class="form-control" placeholder="Optional">
+                                        </div>
+                                        <input type="hidden" name="currency" value="NGN">
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold rounded-pill">Log Income</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% else %}
+    <!-- Login/Register Layout (Centered) -->
+    <nav class="navbar navbar-legacy navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+                <div class="logo-circle me-2" style="width: 32px; height: 32px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 18V6L18 18V6" stroke="white" stroke-width="2.5" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M4 10H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                        <path d="M4 14H20" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                    </svg>
+                </div>
+                TaxOnTheGo
+            </a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Login</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.register') }}">Register</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-semibold ms-lg-2" href="{{ url_for('admin.admin_login') }}"><i class="bi bi-shield-lock-fill me-1"></i>Admin Portal</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+        {% block guest_content %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Currency Masking Logic
+            const currencyInputs = document.querySelectorAll('.currency-input');
+
+            currencyInputs.forEach(input => {
+                input.addEventListener('input', function (e) {
+                    let value = e.target.value;
+                    value = value.replace(/,/g, '');
+
+                    if (value === '' || isNaN(value)) {
+                        value = value.replace(/[^0-9.]/g, '');
+                    }
+
+                    if (value) {
+                        const parts = value.split('.');
+                        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        e.target.value = parts.join('.');
+                    }
+                });
+            });
+
+            // Restore Sidebar Mobile Logic
+            const sidebarCollapse = document.getElementById('sidebarCollapse');
+            if (sidebarCollapse) {
+                sidebarCollapse.addEventListener('click', function () {
+                    const sidebar = document.getElementById('sidebar');
+                    if (sidebar) {
+                        sidebar.classList.toggle('active');
+                    }
+                });
+            }
+
+            // Initialize Bootstrap Tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+
+            // Pre-fill quick add dates with today's date
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('.quick-add-date').forEach(el => el.value = todayStr);
+        });
+    </script>
+</body>
+
+</html>
