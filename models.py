@@ -50,6 +50,7 @@ class User(UserMixin, db.Model):
     
     # Admin & Verification properties
     is_admin = db.Column(db.Boolean, default=False)
+    admin_role = db.Column(db.String(30), default=None) # 'Admin' or 'Support'
     is_email_verified = db.Column(db.Boolean, default=False)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -59,6 +60,7 @@ class User(UserMixin, db.Model):
     expenses = db.relationship('Expense', backref='user', lazy=True, cascade="all, delete-orphan")
     categories = db.relationship('Category', backref='user', lazy=True)
     settings = db.relationship('UserSetting', backref='user', uselist=False, lazy=True)
+    bank_connections = db.relationship('BankConnection', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -122,7 +124,6 @@ class Category(db.Model):
     name = db.Column(db.String(100), nullable=False)
     group = db.Column(db.String(50), nullable=True) # Utilities, Transport, OPEX, etc.
     
-    is_custom = db.Column(db.Boolean, default=False)
     is_custom = db.Column(db.Boolean, default=False)
     target_profile = db.Column(db.Enum(CategoryTarget), default=CategoryTarget.BOTH)
     is_capex = db.Column(db.Boolean, default=False) # For Business logic
@@ -279,8 +280,6 @@ class InvoiceItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False)
     
-
-    
     description = db.Column(db.String(200), nullable=False)
     quantity = db.Column(db.Integer, default=1)
     unit_price = db.Column(db.Float, nullable=False)
@@ -318,3 +317,52 @@ class Subscription(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     category = db.relationship('Category')
+
+class BankConnectionSyncStatus(enum.Enum):
+    CONNECTED = "Connected"
+    SYNC_ERROR = "Sync Error"
+    REQUIRES_MFA = "Requires MFA"
+    DISCONNECTED = "Disconnected"
+
+class BankConnection(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    institution_name = db.Column(db.String(100), nullable=False) # e.g. "GTBank", "Zenith Bank", "Chase", "Plaid Sandbox", "Mono Access"
+    institution_id = db.Column(db.String(50), nullable=True)     # e.g. "ins_109508"
+    account_type = db.Column(db.String(50), default="Checking")    # "Checking", "Savings", "Corporate"
+    account_mask = db.Column(db.String(10), default="1234")       # Last 4 digits
+    
+    sync_status = db.Column(db.Enum(BankConnectionSyncStatus, values_callable=lambda x: [e.value for e in x]), default=BankConnectionSyncStatus.CONNECTED)
+    error_message = db.Column(db.String(255), nullable=True)      # e.g., "MFA session expired. User re-auth required."
+    api_provider = db.Column(db.String(50), default="Plaid")      # "Plaid", "Mono", "MX", "Direct API"
+    
+    last_synced_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class CategorizationRule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # Null for global system rule
+    
+    keyword = db.Column(db.String(100), nullable=False) # e.g. "Uber", "AWS", "Shoprite", "Office Rent"
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
+    match_count = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    category = db.relationship('Category')
+    user = db.relationship('User', backref='custom_rules', foreign_keys=[user_id])
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    admin_email = db.Column(db.String(120), nullable=False)
+    admin_role = db.Column(db.String(30), default="Admin")
+    
+    action = db.Column(db.String(50), nullable=False) # "LOGIN", "USER_LOOKUP", "PLAN_OVERRIDE", "SYNC_RETRY", "IMPERSONATION_START", "IMPERSONATION_END", "USER_DELETE", "RULE_CREATE", "ANNOUNCEMENT_POST"
+    target_user_id = db.Column(db.Integer, nullable=True)
+    target_user_email = db.Column(db.String(120), nullable=True)
+    
+    details = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(50), default="127.0.0.1")
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
