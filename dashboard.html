@@ -1,252 +1,825 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Overview</h1>
-        <div class="btn-group">
-            <a href="{{ url_for('income.income_dashboard') }}" class="btn btn-outline-success">
-                <i class="bi bi-plus-lg"></i> Log Income
+<div class="container-fluid py-3">
+    <!-- Top Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="fw-bold mb-0 text-dark">Admin Control Center</h2>
+                <span class="badge bg-danger shadow-sm px-3 py-2"><i class="bi bi-shield-lock-fill me-1"></i> Master Admin</span>
+                <span class="badge bg-light text-dark border px-2 py-2 small">{{ current_user.email }}</span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">SaaS user diagnostics, bank API telemetry, transaction inspection, and system audit trail.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('admin.export_users') }}" class="btn btn-success shadow-sm fw-semibold">
+                <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Export Users (CSV)
             </a>
-            <a href="{{ url_for('settings.expenses') }}" class="btn btn-outline-danger">
-                <i class="bi bi-dash-lg"></i> Log Expense
+            <a href="{{ url_for('admin.admin_logout') }}" class="btn btn-outline-danger shadow-sm fw-semibold">
+                <i class="bi bi-box-arrow-right me-1"></i> Exit Portal
             </a>
         </div>
     </div>
 
-    {% if alerts %}
-    <div class="row mb-3">
-        <div class="col-12">
-            {% for alert in alerts %}
-            <div class="alert alert-{{ alert.type }} d-flex align-items-center" role="alert">
-                <i class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2"></i>
-                <div>
-                    <strong>{{ alert.title }}:</strong> {{ alert.message }}
+    <!-- Module Navigation Tabs -->
+    <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3" id="adminTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if active_tab == 'users' else '' }} fw-bold px-3 shadow-sm" 
+               href="{{ url_for('admin.dashboard', tab='users') }}">
+                <i class="bi bi-people-fill me-2"></i> 1. User Overview 
+                <span class="badge bg-light text-dark ms-1">{{ total_users }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if active_tab == 'banks' else '' }} fw-bold px-3 shadow-sm" 
+               href="{{ url_for('admin.dashboard', tab='banks') }}">
+                <i class="bi bi-bank2 me-2"></i> 2. Bank Sync & Diagnostics 
+                {% if bank_sync_errors > 0 %}
+                <span class="badge bg-danger ms-1">{{ bank_sync_errors }} Error{{ 's' if bank_sync_errors > 1 else '' }}</span>
+                {% else %}
+                <span class="badge bg-success ms-1">{{ bank_health_rate }}% Health</span>
+                {% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if active_tab == 'transactions' else '' }} fw-bold px-3 shadow-sm" 
+               href="{{ url_for('admin.dashboard', tab='transactions') }}">
+                <i class="bi bi-receipt-cutoff me-2"></i> 3. Transaction Inspector
+                {% if uncategorized_spikes_count > 0 %}
+                <span class="badge bg-warning text-dark ms-1">{{ uncategorized_spikes_count }} Uncategorized</span>
+                {% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if active_tab == 'audit' else '' }} fw-bold px-3 shadow-sm" 
+               href="{{ url_for('admin.dashboard', tab='audit') }}">
+                <i class="bi bi-journal-text me-2"></i> 4. Audit Trail & Roles
+                <span class="badge bg-secondary ms-1">{{ audit_logs|length }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if active_tab == 'announcements' else '' }} fw-bold px-3 shadow-sm" 
+               href="{{ url_for('admin.dashboard', tab='announcements') }}">
+                <i class="bi bi-megaphone-fill me-2"></i> 5. Announcements
+            </a>
+        </li>
+    </ul>
+
+    <!-- ============================================================= -->
+    <!-- MODULE 1: USER OVERVIEW & DETAIL DRAWER                       -->
+    <!-- ============================================================= -->
+    {% if active_tab == 'users' %}
+    <!-- KPI Summary Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-uppercase small fw-bold text-white-50">Total Registered</span>
+                            <h3 class="fw-bold mb-0 mt-1">{{ total_users }}</h3>
+                        </div>
+                        <div class="rounded-circle p-3 bg-white bg-opacity-25 fs-4"><i class="bi bi-people-fill"></i></div>
+                    </div>
                 </div>
             </div>
-            {% endfor %}
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 bg-secondary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-uppercase small fw-bold text-white-50">Subscription Tier</span>
+                            <h3 class="fw-bold mb-0 mt-1">{{ pro_users }} <small class="fs-6 text-white-50">Pro / {{ total_users - pro_users }} Free</small></h3>
+                        </div>
+                        <div class="rounded-circle p-3 bg-white bg-opacity-25 fs-4"><i class="bi bi-star-fill"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-uppercase small fw-bold text-white-50">Business vs Individual</span>
+                            <h3 class="fw-bold mb-0 mt-1">{{ business_count }} <small class="fs-6 text-white-50">Biz : {{ individual_count }} Ind</small></h3>
+                        </div>
+                        <div class="rounded-circle p-3 bg-white bg-opacity-25 fs-4"><i class="bi bi-building"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-uppercase small fw-bold text-white-50">Platform Cash Flow</span>
+                            <div class="small mt-1">
+                                <div>Income: <strong>₦{{ "{:,.0f}".format(total_income) }}</strong></div>
+                                <div>Expense: <strong>₦{{ "{:,.0f}".format(total_expenses) }}</strong></div>
+                            </div>
+                        </div>
+                        <div class="rounded-circle p-3 bg-white bg-opacity-25 fs-4"><i class="bi bi-cash-stack"></i></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    {% endif %}
 
-    <!-- 1. Smart Overview (Profile Based) -->
-    <div class="row mb-4">
-        {% if user.profile_type == ProfileType.INDIVIDUAL %}
-        <!-- INDIVIDUAL VIEW -->
-        <div class="col-md-4">
-            <div class="card bg-success text-white mb-3">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-wallet2"></i> Net Worth</h5>
-                    <h2 class="fw-bold">₦{{ "{:,.2f}".format(net_worth) }}</h2>
-                    <p class="card-text small">Assets + Cash Balance</p>
+    <!-- Filter & Search Bar -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-3">
+            <form method="GET" action="{{ url_for('admin.dashboard') }}" class="row g-2 align-items-center">
+                <input type="hidden" name="tab" value="users">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="q" value="{{ search_query }}" class="form-control bg-light border-0" placeholder="Search by email or name...">
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-light mb-3">
-                <div class="card-body">
-                    <h5 class="card-title text-muted">Monthly Unspent</h5>
-                    <h2 class="fw-bold {{ 'text-success' if monthly_unspent >= 0 else 'text-danger' }}">
-                        ₦{{ "{:,.2f}".format(monthly_unspent) }}
-                    </h2>
-                    <p class="card-text small">
-                        In: <span class="text-success">₦{{ "{:,.2f}".format(monthly_income) }}</span> |
-                        Out: <span class="text-danger">₦{{ "{:,.2f}".format(monthly_expenses) }}</span>
-                    </p>
+                <div class="col-sm-6 col-md-2">
+                    <select name="tier" class="form-select bg-light border-0">
+                        <option value="all" {{ 'selected' if tier_filter == 'all' else '' }}>Tier: All</option>
+                        <option value="pro" {{ 'selected' if tier_filter == 'pro' else '' }}>Pro Only</option>
+                        <option value="free" {{ 'selected' if tier_filter == 'free' else '' }}>Free Tier Only</option>
+                    </select>
                 </div>
-            </div>
+                <div class="col-sm-6 col-md-2">
+                    <select name="profile_type" class="form-select bg-light border-0">
+                        <option value="all" {{ 'selected' if profile_filter == 'all' else '' }}>Profile: All</option>
+                        <option value="Individual" {{ 'selected' if profile_filter == 'Individual' else '' }}>Individual</option>
+                        <option value="Small Business" {{ 'selected' if profile_filter == 'Small Business' else '' }}>Small Business</option>
+                        <option value="Corporation" {{ 'selected' if profile_filter == 'Corporation' else '' }}>Corporation</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 col-md-2">
+                    <select name="role" class="form-select bg-light border-0">
+                        <option value="all" {{ 'selected' if role_filter == 'all' else '' }}>Role: All</option>
+                        <option value="user" {{ 'selected' if role_filter == 'user' else '' }}>Users Only</option>
+                        <option value="admin" {{ 'selected' if role_filter == 'admin' else '' }}>Admins Only</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 fw-semibold">Filter</button>
+                    {% if search_query or tier_filter != 'all' or profile_filter != 'all' or role_filter != 'all' %}
+                    <a href="{{ url_for('admin.dashboard', tab='users') }}" class="btn btn-light border" title="Reset Filters"><i class="bi bi-x-circle"></i></a>
+                    {% endif %}
+                </div>
+            </form>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-info text-white mb-3">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-piggy-bank"></i> Tax Liability</h5>
-                    <h2 class="fw-bold">₦{{ "{:,.2f}".format(net_payable) }}</h2>
-                    <a href="#" class="text-white text-decoration-none small"><i class="bi bi-download"></i> Download
-                        Report</a>
+    </div>
+
+    <!-- Users Table & Inspect Drawer Layout -->
+    <div class="row g-4">
+        <div class="{{ 'col-lg-8' if inspect_user_data else 'col-12' }}">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-transparent border-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-person-lines-fill text-primary me-2"></i> Registered Accounts</h5>
+                    <span class="text-muted small">Showing {{ users|length }} of {{ total_users }} users</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">User & Profile</th>
+                                    <th>Status & Role</th>
+                                    <th>Banks Linked</th>
+                                    <th>Joined</th>
+                                    <th class="text-end pe-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in users %}
+                                <tr class="{{ 'table-primary' if inspect_user_data and inspect_user_data.user.id == u.id else '' }}">
+                                    <td class="ps-3">
+                                        <div class="fw-bold text-dark">{{ u.email }}</div>
+                                        <span class="badge bg-light text-secondary border small">{{ u.profile_type.value if u.profile_type else 'Individual' }}</span>
+                                        {% if u.industry %}
+                                        <span class="badge bg-light text-muted border small">{{ u.industry.value }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if u.is_admin %}
+                                        <span class="badge bg-danger me-1"><i class="bi bi-shield-fill"></i> Admin</span>
+                                        {% endif %}
+                                        {% if u.is_pro %}
+                                        <span class="badge bg-warning text-dark border border-warning me-1"><i class="bi bi-star-fill"></i> Pro</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted border me-1">Free</span>
+                                        {% endif %}
+                                        {% if u.is_email_verified %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle" title="Verified"><i class="bi bi-check-circle-fill"></i></span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set bank_cnt = u.bank_connections|length %}
+                                        {% if bank_cnt > 0 %}
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                            <i class="bi bi-bank me-1"></i> {{ bank_cnt }} Connected
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted small">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small text-muted">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td class="text-end pe-3">
+                                        <div class="btn-group btn-group-sm">
+                                            <!-- Inspect User Detail Drawer -->
+                                            <a href="{{ url_for('admin.dashboard', tab='users', inspect_user_id=u.id, q=search_query, tier=tier_filter, profile_type=profile_filter) }}" 
+                                               class="btn btn-outline-primary" title="Inspect User Details">
+                                                <i class="bi bi-layout-sidebar-inset"></i> Details
+                                            </a>
+                                            <!-- Support Mode: View as user -->
+                                            <form action="{{ url_for('admin.impersonate', user_id=u.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-outline-dark" title="View as user (Read-only support)">
+                                                    <i class="bi bi-eye-fill"></i> View As
+                                                </button>
+                                            </form>
+                                            <!-- Manage Dropdown -->
+                                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                Manage
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                <li>
+                                                    <form action="{{ url_for('admin.toggle_pro', user_id=u.id) }}" method="POST">
+                                                        <button type="submit" class="dropdown-item">
+                                                            <i class="bi bi-star-fill text-warning me-2"></i> 
+                                                            {{ 'Downgrade to Free' if u.is_pro else 'Upgrade to Pro' }}
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form action="{{ url_for('admin.toggle_admin', user_id=u.id) }}" method="POST">
+                                                        <button type="submit" class="dropdown-item">
+                                                            <i class="bi bi-shield-lock text-danger me-2"></i> 
+                                                            {{ 'Revoke Admin' if u.is_admin else 'Grant Admin Access' }}
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <form action="{{ url_for('admin.delete_user', user_id=u.id) }}" method="POST" 
+                                                          onsubmit="return confirm('WARNING: Are you sure you want to delete {{ u.email }}? All linked financial and bank records will be permanently purged.');">
+                                                        <button type="submit" class="dropdown-item text-danger">
+                                                            <i class="bi bi-trash-fill me-2"></i> Delete Account
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="bi bi-people display-6 d-block mb-2 text-muted opacity-50"></i>
+                                        No registered accounts match your filter criteria.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
-        {% else %}
-        <!-- BUSINESS VIEW -->
-        <div class="col-md-4">
-            <div class="card bg-primary text-white mb-3">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-graph-up"></i> Total Revenue</h5>
-                    <h2 class="fw-bold">₦{{ "{:,.2f}".format(business_metrics.revenue) }}</h2>
-                    <p class="card-text small">Gross Sales (Year)</p>
+        <!-- User Detail Drawer (when a user is selected) -->
+        {% if inspect_user_data %}
+        <div class="col-lg-4">
+            <div class="card shadow border-0 sticky-top" style="top: 80px; z-index: 100;">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-person-badge-fill me-2"></i> User Diagnostic Drawer</h6>
+                    <a href="{{ url_for('admin.dashboard', tab='users', q=search_query, tier=tier_filter, profile_type=profile_filter) }}" 
+                       class="btn btn-sm btn-light py-0 px-2 text-primary" title="Close Drawer">&times;</a>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card {{ 'bg-success' if business_metrics.profit > 0 else 'bg-warning' }} text-white mb-3">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-cash-stack"></i> Net Profit</h5>
-                    <h2 class="fw-bold">₦{{ "{:,.2f}".format(business_metrics.profit) }}</h2>
-                    <p class="card-text small">Margin: {{ "{:.1f}".format(business_metrics.margin) }}%</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-dark text-white mb-3">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-bank"></i> Est. Tax (CIT)</h5>
-                    <h2 class="fw-bold">₦{{ "{:,.2f}".format(net_payable) }}</h2>
-                    <a href="#" class="text-white text-decoration-none small"><i class="bi bi-download"></i> Download
-                        Filing Report</a>
+                <div class="card-body p-3">
+                    <div class="text-center pb-3 border-bottom mb-3">
+                        <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 52px; height: 52px;">
+                            <span class="fs-4 fw-bold">{{ inspect_user_data.user.email[0].upper() }}</span>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1">{{ inspect_user_data.user.email }}</h6>
+                        <span class="badge bg-secondary">{{ inspect_user_data.user.profile_type.value }}</span>
+                        {% if inspect_user_data.user.is_pro %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-star-fill"></i> Pro Plan</span>
+                        {% else %}
+                        <span class="badge bg-light text-muted border">Free Plan</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Financial Summary Snapshot -->
+                    <h6 class="text-uppercase small fw-bold text-muted mb-2">Financials Snapshot</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded text-center">
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Total Inflow</small>
+                                <strong class="text-success small">₦{{ "{:,.0f}".format(inspect_user_data.total_income) }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded text-center">
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Total Outflow</small>
+                                <strong class="text-danger small">₦{{ "{:,.0f}".format(inspect_user_data.total_expenses) }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Linked Bank Institutions -->
+                    <h6 class="text-uppercase small fw-bold text-muted mb-2 d-flex justify-content-between">
+                        <span>Linked Bank Accounts</span>
+                        <span class="badge bg-light text-dark border">{{ inspect_user_data.bank_count }}</span>
+                    </h6>
+                    {% if inspect_user_data.banks %}
+                    <ul class="list-group list-group-flush mb-3 small">
+                        {% for b in inspect_user_data.banks %}
+                        <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ b.institution_name }}</strong> 
+                                <span class="text-muted">({{ b.account_type }} ...{{ b.account_mask }})</span>
+                                {% if b.error_message %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ b.error_message }}</div>
+                                {% endif %}
+                            </div>
+                            <span class="badge {{ 'bg-success' if b.sync_status.value == 'Connected' else ('bg-danger' if b.sync_status.value == 'Sync Error' else 'bg-warning text-dark') }}">
+                                {{ b.sync_status.value }}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="alert alert-light text-center small text-muted py-2 mb-3">No bank institutions linked yet.</div>
+                    {% endif %}
+
+                    <!-- Support Actions -->
+                    <div class="d-grid gap-2">
+                        <form action="{{ url_for('admin.impersonate', user_id=inspect_user_data.user.id) }}" method="POST">
+                            <button type="submit" class="btn btn-dark w-100 fw-semibold">
+                                <i class="bi bi-eye-fill me-1"></i> View as User (Diagnose Screen)
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
         {% endif %}
     </div>
+    {% endif %}
 
-    <!-- 2. Tax Context & Optimization Nudge -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card border-primary">
+    <!-- ============================================================= -->
+    <!-- MODULE 2: BANK CONNECTION & SYNC DIAGNOSTICS                 -->
+    <!-- ============================================================= -->
+    {% if active_tab == 'banks' %}
+    <!-- Telemetry Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 bg-primary text-white h-100">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title text-primary"><i class="bi bi-shield-lock-fill"></i> Tax Estimator</h5>
-                        <p class="mb-0">
-                            Based on your earnings, you may pay an estimate of
-                            <span class="badge bg-primary fs-6">₦ {{ "{:,.2f}".format(tax_info.total_tax) }}</span>
-                            by the next filing date.
-                        </p>
-                        <small class="text-muted d-block mt-2">
-                            💡 <strong>Pro-Tip:</strong> You can lower this bill by documenting your Rent (up to 20%
-                            relief) and maximize your future wealth by investing in Government Bonds, which are 100%
-                            tax-free.
-                        </small>
+                        <span class="text-uppercase small fw-bold text-white-50">Total Institutions Linked</span>
+                        <h3 class="fw-bold mb-0 mt-1">{{ total_banks }}</h3>
                     </div>
+                    <div class="rounded-circle p-3 bg-white bg-opacity-25 fs-4"><i class="bi bi-bank2"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 bg-success text-white h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
-                        <a href="{{ url_for('investment.wealth_dashboard') }}" class="btn btn-primary">Invest to
-                            Save</a>
+                        <span class="text-uppercase small fw-bold text-white-50">Sync API Health Rate</span>
+                        <h3 class="fw-bold mb-0 mt-1">{{ bank_health_rate }}%</h3>
                     </div>
+                    <div class="rounded-circle p-3 bg-white bg-opacity-25 fs-4"><i class="bi bi-heart-pulse-fill"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 bg-danger text-white h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-uppercase small fw-bold text-white-50">Active Sync Errors</span>
+                        <h3 class="fw-bold mb-0 mt-1">{{ bank_sync_errors }}</h3>
+                    </div>
+                    <div class="rounded-circle p-3 bg-white bg-opacity-25 fs-4"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 bg-warning text-dark h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-uppercase small fw-bold text-dark-50">Expired MFA Re-auth</span>
+                        <h3 class="fw-bold mb-0 mt-1">{{ bank_mfa_required }}</h3>
+                    </div>
+                    <div class="rounded-circle p-3 bg-dark bg-opacity-10 fs-4"><i class="bi bi-shield-exclamation"></i></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 3. Financial Analytics (Charts) -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100 border-0 rounded-4">
-                <div class="card-body p-4">
-                    <h5 class="card-title text-muted mb-4 fw-bold">Expenses Breakdown</h5>
-                    <div style="height: 300px; position: relative;">
-                        <canvas id="expenseChart"></canvas>
+    <!-- Actions & Filter Bar -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <form method="GET" action="{{ url_for('admin.dashboard') }}" class="d-flex flex-wrap align-items-center gap-2">
+                    <input type="hidden" name="tab" value="banks">
+                    <select name="bank_inst" class="form-select bg-light border-0" style="width: 200px;">
+                        <option value="all">Institution: All</option>
+                        {% for inst in distinct_institutions %}
+                        <option value="{{ inst }}" {{ 'selected' if bank_inst_filter == inst else '' }}>{{ inst }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="bank_status" class="form-select bg-light border-0" style="width: 180px;">
+                        <option value="all">Status: All</option>
+                        <option value="Connected" {{ 'selected' if bank_status_filter == 'Connected' else '' }}>Connected</option>
+                        <option value="Sync Error" {{ 'selected' if bank_status_filter == 'Sync Error' else '' }}>Sync Error</option>
+                        <option value="Requires MFA" {{ 'selected' if bank_status_filter == 'Requires MFA' else '' }}>Requires MFA</option>
+                        <option value="Disconnected" {{ 'selected' if bank_status_filter == 'Disconnected' else '' }}>Disconnected</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary fw-semibold">Filter</button>
+                    {% if bank_inst_filter != 'all' or bank_status_filter != 'all' %}
+                    <a href="{{ url_for('admin.dashboard', tab='banks') }}" class="btn btn-light border"><i class="bi bi-x-circle"></i></a>
+                    {% endif %}
+                </form>
+
+                <form action="{{ url_for('admin.sync_all_banks') }}" method="POST">
+                    <button type="submit" class="btn btn-outline-primary fw-semibold shadow-sm">
+                        <i class="bi bi-arrow-repeat me-1"></i> Re-trigger All API Syncs
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bank Connections Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-transparent border-0 pt-3 px-3">
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-hdd-network-fill text-primary me-2"></i> Connected Institutions & API Health</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Institution & Provider</th>
+                            <th>User Account</th>
+                            <th>Account Type & Mask</th>
+                            <th>Sync Status</th>
+                            <th>Last Synced</th>
+                            <th class="text-end pe-3">Diagnostics & Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in bank_connections %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-bold text-dark">{{ b.institution_name }}</div>
+                                <span class="badge bg-light text-muted border small">{{ b.api_provider }}</span>
+                            </td>
+                            <td>
+                                <div class="small fw-semibold text-dark">{{ b.user.email if b.user else 'Orphan Account' }}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-secondary border">{{ b.account_type }} •••• {{ b.account_mask }}</span>
+                            </td>
+                            <td>
+                                {% if b.sync_status.value == 'Connected' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Connected
+                                </span>
+                                {% elif b.sync_status.value == 'Sync Error' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Sync Error
+                                </span>
+                                {% elif b.sync_status.value == 'Requires MFA' %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                                    <i class="bi bi-shield-exclamation me-1"></i> Requires MFA
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                    <i class="bi bi-x-circle-fill me-1"></i> Disconnected
+                                </span>
+                                {% endif %}
+
+                                {% if b.error_message %}
+                                <div class="text-danger small mt-1 font-monospace" style="font-size: 0.75rem;">
+                                    {{ b.error_message }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">
+                                {{ b.last_synced_at.strftime('%Y-%m-%d %H:%M') if b.last_synced_at else 'Never' }}
+                            </td>
+                            <td class="text-end pe-3">
+                                <div class="btn-group btn-group-sm">
+                                    <!-- Re-trigger Sync Button -->
+                                    <form action="{{ url_for('admin.sync_bank', connection_id=b.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-primary shadow-sm" title="Re-trigger background sync">
+                                            <i class="bi bi-arrow-clockwise me-1"></i> Retry Sync
+                                        </button>
+                                    </form>
+
+                                    <!-- Simulate Diagnostic States -->
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Simulate Error State">
+                                        <i class="bi bi-bug-fill"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 small">
+                                        <li><h6 class="dropdown-header">Simulate Diagnostic Error</h6></li>
+                                        <li>
+                                            <form action="{{ url_for('admin.simulate_bank_error', connection_id=b.id) }}" method="POST">
+                                                <input type="hidden" name="error_type" value="mfa">
+                                                <button type="submit" class="dropdown-item text-warning"><i class="bi bi-shield-exclamation me-2"></i> Trigger Expired MFA</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form action="{{ url_for('admin.simulate_bank_error', connection_id=b.id) }}" method="POST">
+                                                <input type="hidden" name="error_type" value="api_500">
+                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-exclamation-triangle me-2"></i> Trigger API 500 Error</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form action="{{ url_for('admin.simulate_bank_error', connection_id=b.id) }}" method="POST">
+                                                <input type="hidden" name="error_type" value="disconnected">
+                                                <button type="submit" class="dropdown-item text-secondary"><i class="bi bi-slash-circle me-2"></i> Trigger Disconnect</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-bank display-6 d-block mb-2 opacity-50"></i>
+                                No connected institutions recorded in the diagnostic ledger.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================= -->
+    <!-- MODULE 3: TRANSACTION & CATEGORIZATION INSPECTOR              -->
+    <!-- ============================================================= -->
+    {% if active_tab == 'transactions' %}
+    <div class="row g-4 mb-4">
+        <!-- Add Custom Categorization Rule Card -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-transparent border-0 pt-3 px-3">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-magic text-primary me-2"></i> Auto-Categorization Rule</h5>
+                    <small class="text-muted">Create keyword mapping rules for imported transactions.</small>
+                </div>
+                <div class="card-body p-3">
+                    <form action="{{ url_for('admin.add_rule') }}" method="POST" class="mb-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Merchant Keyword</label>
+                            <input type="text" name="keyword" class="form-control" required placeholder="e.g., Uber, AWS, Shoprite">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Map to Category</label>
+                            <select name="category_id" class="form-select" required>
+                                {% for cat in all_categories %}
+                                <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.group or 'General' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                            <i class="bi bi-plus-circle-fill me-1"></i> Add Active Rule
+                        </button>
+                    </form>
+
+                    <h6 class="fw-bold small text-uppercase text-muted mb-2">Active Rules Ledger</h6>
+                    <div class="list-group list-group-flush border rounded small" style="max-height: 280px; overflow-y: auto;">
+                        {% for r in categorization_rules %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center p-2">
+                            <div>
+                                <span class="fw-bold text-dark">"{{ r.keyword }}"</span> &rarr; 
+                                <span class="badge bg-light text-primary border">{{ r.category.name if r.category else 'Unknown' }}</span>
+                                <div class="text-muted" style="font-size: 0.7rem;">Matches: {{ r.match_count }} times</div>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <form action="{{ url_for('admin.toggle_rule', rule_id=r.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-light border" title="Toggle active">
+                                        <i class="bi {{ 'bi-toggle-on text-success' if r.is_active else 'bi-toggle-off text-muted' }}"></i>
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('admin.delete_rule', rule_id=r.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete rule">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="p-3 text-center text-muted small">No custom rules active.</div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100 border-0 rounded-4">
-                <div class="card-body p-4">
-                    <h5 class="card-title text-muted mb-4 fw-bold">Cash Flow Overview</h5>
-                    <div style="height: 300px; position: relative; display: flex; justify-content: center;">
-                        <canvas id="compChart"></canvas>
+
+        <!-- Transaction Inspector Table -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-transparent border-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-search text-primary me-2"></i> Transaction Stream</h5>
+                    {% if uncategorized_spikes_count > 0 %}
+                    <span class="badge bg-warning text-dark border border-warning shadow-sm">
+                        <i class="bi bi-flag-fill me-1"></i> {{ uncategorized_spikes_count }} Uncategorized Flagged
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="card-body p-3">
+                    <!-- Search & Filter Transactions -->
+                    <form method="GET" action="{{ url_for('admin.dashboard') }}" class="row g-2 mb-3">
+                        <input type="hidden" name="tab" value="transactions">
+                        <div class="col-md-7">
+                            <input type="text" name="tx_q" value="{{ tx_search }}" class="form-control bg-light border-0" placeholder="Filter by merchant or user email...">
+                        </div>
+                        <div class="col-md-3">
+                            <select name="tx_cat" class="form-select bg-light border-0">
+                                <option value="all">Category: All</option>
+                                {% for cat in all_categories %}
+                                <option value="{{ cat.name }}" {{ 'selected' if tx_category == cat.name else '' }}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex gap-1">
+                            <button type="submit" class="btn btn-primary w-100 fw-semibold">Search</button>
+                            {% if tx_search or tx_category != 'all' %}
+                            <a href="{{ url_for('admin.dashboard', tab='transactions') }}" class="btn btn-light border"><i class="bi bi-x-circle"></i></a>
+                            {% endif %}
+                        </div>
+                    </form>
+
+                    <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0 small">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>User</th>
+                                    <th>Merchant / Description</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount (NGN)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tx in transactions %}
+                                <tr class="{{ 'table-warning' if tx.is_uncategorized else '' }}">
+                                    <td class="text-muted">{{ tx.date.strftime('%Y-%m-%d') }}</td>
+                                    <td class="fw-semibold text-dark">{{ tx.user_email }}</td>
+                                    <td>{{ tx.description }}</td>
+                                    <td>
+                                        {% if tx.is_uncategorized %}
+                                        <span class="badge bg-warning text-dark border border-warning"><i class="bi bi-flag-fill me-1"></i> {{ tx.category }}</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-secondary border">{{ tx.category }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end fw-bold text-danger">₦{{ "{:,.2f}".format(tx.amount) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">No transactions found matching query.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
+
+    <!-- ============================================================= -->
+    <!-- MODULE 4: AUDIT TRAIL & STAFF ACCESS                          -->
+    <!-- ============================================================= -->
+    {% if active_tab == 'audit' %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-transparent border-0 pt-3 px-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-shield-check text-primary me-2"></i> Master Audit Trail</h5>
+                <small class="text-muted">Immutable ledger tracking administrative actions, user lookups, sync retries, and plan overrides.</small>
+            </div>
+
+            <form method="GET" action="{{ url_for('admin.dashboard') }}" class="d-flex align-items-center gap-2">
+                <input type="hidden" name="tab" value="audit">
+                <select name="audit_action" class="form-select bg-light border-0" style="width: 220px;">
+                    <option value="all">Filter by Action: All</option>
+                    {% for act in distinct_audit_actions %}
+                    <option value="{{ act }}" {{ 'selected' if audit_action_filter == act else '' }}>{{ act }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary fw-semibold">Filter</button>
+                {% if audit_action_filter != 'all' %}
+                <a href="{{ url_for('admin.dashboard', tab='audit') }}" class="btn btn-light border"><i class="bi bi-x-circle"></i></a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Timestamp (UTC)</th>
+                            <th>Staff Admin</th>
+                            <th>Action Type</th>
+                            <th>Target User</th>
+                            <th>Operational Details</th>
+                            <th class="text-end pe-3">IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td class="ps-3 text-muted">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                <strong class="text-dark">{{ log.admin_email }}</strong>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle small ms-1">{{ log.admin_role }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-dark px-2 py-1 font-monospace">{{ log.action }}</span>
+                            </td>
+                            <td>
+                                {% if log.target_user_email %}
+                                <span class="badge bg-light text-dark border">{{ log.target_user_email }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="text-secondary font-monospace" style="max-width: 400px; word-break: break-all;">
+                                    {{ log.details or '-' }}
+                                </div>
+                            </td>
+                            <td class="text-end pe-3 text-muted">{{ log.ip_address }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">No audit trail records registered.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================= -->
+    <!-- MODULE 5: ANNOUNCEMENTS MANAGEMENT                            -->
+    <!-- ============================================================= -->
+    {% if active_tab == 'announcements' %}
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-transparent border-0 pt-3 px-3">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-megaphone-fill text-primary me-2"></i> System-Wide Announcement Banner</h5>
+                    <small class="text-muted">Broadcast a notification message across the top of all user dashboards.</small>
+                </div>
+                <div class="card-body p-3">
+                    {% if active_announcement %}
+                    <div class="alert alert-info shadow-sm mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-primary text-uppercase">Currently Active</span>
+                            <small class="text-muted">{{ active_announcement.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <p class="mb-3 fw-semibold text-dark">{{ active_announcement.message }}</p>
+                        <form method="POST" action="{{ url_for('admin.disable_announcement') }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100 fw-semibold">
+                                <i class="bi bi-x-circle me-1"></i> Deactivate Announcement Banner
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('admin.post_announcement') }}">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Announcement Content</label>
+                            <textarea name="message" class="form-control" rows="4" required 
+                                      placeholder="e.g., System maintenance scheduled for Sunday at 02:00 AM UTC. Please save your invoice drafts."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
+                            <i class="bi bi-broadcast me-1"></i> Broadcast Announcement Globally
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    // Data from Flask
-    const expenseLabels = {{ expense_labels | tojson }};
-    const expenseValues = {{ expense_values | tojson }};
-    const compLabels = {{ comp_labels | tojson }};
-    const compValues = {{ comp_values | tojson }};
-
-    function formatCurrency(value) {
-        return '₦' + value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    // Expense Chart
-    const ctxExp = document.getElementById('expenseChart').getContext('2d');
-    
-    // Create subtle gradient
-    let gradientExp = ctxExp.createLinearGradient(0, 0, 0, 400);
-    gradientExp.addColorStop(0, 'rgba(54, 162, 235, 0.8)');
-    gradientExp.addColorStop(1, 'rgba(54, 162, 235, 0.2)');
-
-    new Chart(ctxExp, {
-        type: 'bar',
-        data: {
-            labels: expenseLabels,
-            datasets: [{
-                label: 'Expenses',
-                data: expenseValues,
-                backgroundColor: gradientExp,
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 2,
-                borderRadius: 8,
-                borderSkipped: false,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-                duration: 1500,
-                easing: 'easeOutQuart'
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) { return formatCurrency(context.raw); }
-                    },
-                    padding: 10,
-                    cornerRadius: 8,
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { borderDash: [5, 5], color: '#e9ecef', drawBorder: false },
-                    ticks: { callback: function(value) { return '₦' + value.toLocaleString(); } }
-                },
-                x: {
-                    grid: { display: false }
-                }
-            }
-        }
-    });
-
-    // Cash Flow Chart (Using Comp Data)
-    const ctxComp = document.getElementById('compChart').getContext('2d');
-    new Chart(ctxComp, {
-        type: 'doughnut',
-        data: {
-            labels: compLabels,
-            datasets: [{
-                data: compValues,
-                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
-                borderWidth: 0,
-                hoverOffset: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%',
-            animation: {
-                animateScale: true,
-                duration: 1200
-            },
-            plugins: {
-                legend: { position: 'bottom', labels: { padding: 20, font: { weight: 'bold' } } },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) { return ' ' + formatCurrency(context.raw); }
-                    },
-                    padding: 10,
-                    cornerRadius: 8
-                }
-            }
-        }
-    });
-</script>
 {% endblock %}

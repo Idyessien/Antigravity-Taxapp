@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3 d-print-none">
+        <div class="col">
+            <a href="{{ url_for('business.invoices') }}" class="btn btn-outline-secondary"><i
+                    class="bi bi-arrow-left"></i> Back</a>
+        </div>
+        <div class="col text-end">
+            <div class="btn-group">
+                <button onclick="window.print()" class="btn btn-secondary"><i class="bi bi-printer"></i> Print /
+                    PDF</button>
+                {% if invoice.status.value == 'Draft' %}
+                <a href="{{ url_for('business.update_invoice_status', id=invoice.id, status='sent') }}"
+                    class="btn btn-primary">Mark as Sent</a>
+                {% endif %}
+                {% if invoice.status.value == 'Sent' %}
+                <a href="{{ url_for('business.update_invoice_status', id=invoice.id, status='paid') }}"
+                    class="btn btn-success">Mark as Paid</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Paper -->
+    <div class="card shadow p-4" id="invoice-paper">
+        <div class="row mb-4">
+            <div class="col-6">
+                <h1 class="text-primary mb-0">INVOICE</h1>
+                <p class="text-muted">#{{ invoice.invoice_number }}</p>
+            </div>
+            <div class="col-6 text-end">
+                <h4>{{ current_user.email }}</h4> <!-- Business Name would be better -->
+                <p>Date: {{ invoice.date_issued.strftime('%d %b %Y') }}</p>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-6">
+                <h6 class="text-uppercase text-muted">Bill To:</h6>
+                <h5>{{ invoice.debtor.name }}</h5>
+                <div>{{ invoice.debtor.email or '' }}</div>
+                <div>{{ invoice.debtor.phone or '' }}</div>
+            </div>
+            <div class="col-6 text-end">
+                <h6 class="text-uppercase text-muted">Amount Due:</h6>
+                <h2 class="fw-bold">₦{{ "{:,.2f}".format(invoice.total_amount) }}</h2>
+                <div class="badge bg-{{ 'success' if invoice.status.value == 'Paid' else 'secondary' }} fs-6">
+                    {{ invoice.status.value }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Items -->
+        <table class="table table-bordered mb-4">
+            <thead class="table-light">
+                <tr>
+                    <th>Description</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.items %}
+                <tr>
+                    <td>{{ item.description }}</td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-end">₦{{ "{:,.2f}".format(item.unit_price) }}</td>
+                    <td class="text-end">₦{{ "{:,.2f}".format(item.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end fw-bold">Total</td>
+                    <td class="text-end fw-bold">₦{{ "{:,.2f}".format(invoice.total_amount) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Terms -->
+        <div class="text-muted small mt-5">
+            <p><strong>Terms:</strong> Payment due by {{ invoice.due_date.strftime('%d %b %Y') }}.</p>
+            <p>Thank you for your business!</p>
+        </div>
+    </div>
+
+    <!-- Add Item Form (Draft Only) -->
+    {% if invoice.status.value == 'Draft' %}
+    <div class="card mt-4 d-print-none bg-light border-0">
+        <div class="card-body">
+            <h5>Add Line Item</h5>
+            <form method="POST" class="row g-3">
+                <div class="col-md-5">
+                    <input type="text" name="description" class="form-control" placeholder="Item description" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" name="quantity" class="form-control" placeholder="Qty" value="1" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="number" name="price" class="form-control" placeholder="Unit Price" step="0.01"
+                        required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-primary w-100">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

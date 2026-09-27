@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Debtor Management</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDebtorModal">
+            <i class="bi bi-person-plus"></i> Add Debtor
+        </button>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for debtor in debtors %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ debtor.name }}</div>
+                                <small class="text-muted">Added: {{ debtor.created_at.strftime('%Y-%m-%d') }}</small>
+                            </td>
+                            <td>
+                                <div><i class="bi bi-envelope"></i> {{ debtor.email or 'N/A' }}</div>
+                                <div><i class="bi bi-phone"></i> {{ debtor.phone or 'N/A' }}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Active</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary">History</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4">No debtors found. Add one to get started.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addDebtorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Debtor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Client Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" name="phone" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Save Client</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

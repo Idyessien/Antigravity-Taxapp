@@ -5,11 +5,27 @@ from extensions import bcrypt
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from dotenv import load_dotenv
+from jinja2 import ChoiceLoader, FileSystemLoader
 
 load_dotenv()
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key')
+
+# Multi-path template loader: enables Flask to seamlessly find templates in templates/, root, or admin/
+template_dirs = [
+    os.path.join(basedir, 'templates'),
+    basedir,
+    os.path.join(basedir, 'templates', 'admin'),
+    os.path.join(basedir, 'admin'),
+    os.path.join(basedir, 'templates', 'auth'),
+    os.path.join(basedir, 'auth'),
+    os.path.join(basedir, 'templates', 'business'),
+    os.path.join(basedir, 'business')
+]
+app.jinja_loader = ChoiceLoader([FileSystemLoader(d) for d in template_dirs if os.path.exists(d)] + [FileSystemLoader(os.path.join(basedir, 'templates')), FileSystemLoader(basedir)])
 
 # Mail Configuration
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
@@ -19,8 +35,6 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'idyessien101@gmai
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 
 # Using SQLite for local dev, compatible with PostgreSQL
-import os
-basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'site.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
