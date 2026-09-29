@@ -25,7 +25,7 @@ template_dirs = [
     os.path.join(basedir, 'templates', 'business'),
     os.path.join(basedir, 'business')
 ]
-app.jinja_loader = ChoiceLoader([FileSystemLoader(d) for d in template_dirs if os.path.exists(d)] + [FileSystemLoader(basedir), FileSystemLoader(os.path.join(basedir, 'templates'))])
+app.jinja_loader = ChoiceLoader([FileSystemLoader(d) for d in template_dirs if os.path.exists(d)] + [FileSystemLoader(os.path.join(basedir, 'templates'))])
 
 # Mail Configuration
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
