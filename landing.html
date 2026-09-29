@@ -21,26 +21,10 @@
         <!-- Main User CTA -->
         <div class="d-flex flex-wrap justify-content-center gap-3 mb-4">
             <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-5 shadow-sm fw-bold">
-                <i class="bi bi-person-plus-fill me-2"></i>Get Started (Register)
+                <i class="bi bi-person-plus-fill me-2"></i>Get Started
             </a>
             <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-5 fw-bold">
                 <i class="bi bi-box-arrow-in-right me-2"></i>User Login
-            </a>
-            <a href="{{ url_for('admin.admin_login') }}" class="btn btn-dark btn-lg px-4 shadow-sm fw-bold">
-                <i class="bi bi-shield-lock-fill text-warning me-2"></i>Admin Login
-            </a>
-        </div>
-
-        <!-- Dedicated Admin Quick Access Link Bar -->
-        <div class="d-inline-flex align-items-center bg-white px-4 py-2 rounded-pill shadow-sm border small text-muted">
-            <span class="badge bg-danger me-2"><i class="bi bi-shield-fill"></i> Admin</span>
-            <span>Master Administrator:</span>
-            <a href="{{ url_for('admin.admin_login') }}" class="text-dark fw-bold text-decoration-none ms-2 me-3">
-                <i class="bi bi-key-fill text-primary"></i> Admin Sign In
-            </a>
-            <span class="text-muted opacity-50">•</span>
-            <a href="{{ url_for('admin.admin_register') }}" class="text-dark fw-bold text-decoration-none ms-3">
-                <i class="bi bi-person-badge-fill text-success"></i> Admin Registration
             </a>
         </div>
     </div>
@@ -111,10 +95,5 @@
 <!-- Trust/Footer Section -->
 <div class="text-center text-muted mb-5">
     <small>© 2026 TaxOnTheGo. Compliant with FIRS & State Tax Regulations.</small>
-    <div class="mt-2 small">
-        <a href="{{ url_for('admin.admin_login') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-shield-lock-fill text-danger me-1"></i>Admin Login</a>
-        •
-        <a href="{{ url_for('admin.admin_register') }}" class="text-decoration-none text-muted ms-2"><i class="bi bi-person-plus-fill me-1"></i>Admin Registration</a>
-    </div>
 </div>
 {% endblock %}
