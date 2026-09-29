@@ -26,19 +26,19 @@
     <!-- Module Navigation Tabs -->
     <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3" id="adminTabs" role="tablist">
         <li class="nav-item">
-            <a class="nav-link {{ 'active text-white' if active_tab == 'users' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active' if active_tab == 'users' else 'text-secondary' }} fw-bold px-3 shadow-sm" {{ ('style="color:white!important;"' if active_tab == 'users' else '')|safe }} 
                href="{{ url_for('admin.dashboard', tab='users') }}">
                 <i class="bi bi-people-fill me-2"></i> 1. User Overview 
                 <span class="badge bg-light text-dark ms-1">{{ total_users }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active text-white' if active_tab == 'banks' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active' if active_tab == 'banks' else 'text-secondary' }} fw-bold px-3 shadow-sm" {{ ('style="color:white!important;"' if active_tab == 'banks' else '')|safe }} 
                href="{{ url_for('admin.dashboard', tab='banks') }}">
                 <i class="bi bi-bank2 me-2"></i> 2. Platform Analytics </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active text-white' if active_tab == 'transactions' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active' if active_tab == 'transactions' else 'text-secondary' }} fw-bold px-3 shadow-sm" {{ ('style="color:white!important;"' if active_tab == 'transactions' else '')|safe }} 
                href="{{ url_for('admin.dashboard', tab='transactions') }}">
                 <i class="bi bi-receipt-cutoff me-2"></i> 3. Transaction Inspector
                 {% if uncategorized_spikes_count > 0 %}
@@ -47,14 +47,14 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active text-white' if active_tab == 'audit' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active' if active_tab == 'audit' else 'text-secondary' }} fw-bold px-3 shadow-sm" {{ ('style="color:white!important;"' if active_tab == 'audit' else '')|safe }} 
                href="{{ url_for('admin.dashboard', tab='audit') }}">
                 <i class="bi bi-journal-text me-2"></i> 4. Audit Trail & Roles
                 <span class="badge bg-secondary ms-1">{{ audit_logs|length }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active text-white' if active_tab == 'announcements' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active' if active_tab == 'announcements' else 'text-secondary' }} fw-bold px-3 shadow-sm" {{ ('style="color:white!important;"' if active_tab == 'announcements' else '')|safe }} 
                href="{{ url_for('admin.dashboard', tab='announcements') }}">
                 <i class="bi bi-megaphone-fill me-2"></i> 5. Announcements
             </a>
@@ -559,50 +559,58 @@
         </div>
 
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 small">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3">Timestamp (UTC)</th>
-                            <th>Staff Admin</th>
-                            <th>Action Type</th>
-                            <th>Target User</th>
-                            <th>Operational Details</th>
-                            <th class="text-end pe-3">IP Address</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in audit_logs %}
-                        <tr>
-                            <td class="ps-3 text-muted">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                            <td>
-                                <strong class="text-dark">{{ log.admin_email }}</strong>
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle small ms-1">{{ log.admin_role }}</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-dark px-2 py-1 font-monospace">{{ log.action }}</span>
-                            </td>
-                            <td>
-                                {% if log.target_user_email %}
-                                <span class="badge bg-light text-dark border">{{ log.target_user_email }}</span>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="text-secondary font-monospace" style="max-width: 400px; word-break: break-all;">
-                                    {{ log.details or '-' }}
-                                </div>
-                            </td>
-                            <td class="text-end pe-3 text-muted">{{ log.ip_address }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">No audit trail records registered.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="accordion accordion-flush" id="auditAccordion">
+                {% for admin_email, logs in grouped_audit_logs.items() %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-{{ loop.index }}">
+                        <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}">
+                            <i class="bi bi-person-badge-fill me-2 text-primary"></i> 
+                            {{ admin_email }} 
+                            <span class="badge bg-primary rounded-pill ms-2">{{ logs|length }} actions</span>
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#auditAccordion">
+                        <div class="accordion-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 small border-top-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-3 border-0">Timestamp (UTC)</th>
+                                            <th class="border-0">Action Type</th>
+                                            <th class="border-0">Target User</th>
+                                            <th class="border-0">Operational Details</th>
+                                            <th class="text-end pe-3 border-0">IP Address</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for log in logs %}
+                                        <tr>
+                                            <td class="ps-3 text-muted">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                            <td><span class="badge bg-dark px-2 py-1 font-monospace">{{ log.action }}</span></td>
+                                            <td>
+                                                {% if log.target_user_email %}
+                                                <span class="badge bg-light text-dark border">{{ log.target_user_email }}</span>
+                                                {% else %}
+                                                <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="text-secondary font-monospace" style="max-width: 400px; word-break: break-all;">
+                                                    {{ log.details or '-' }}
+                                                </div>
+                                            </td>
+                                            <td class="text-end pe-3 text-muted">{{ log.ip_address }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">No audit trail records registered.</div>
+                {% endfor %}
             </div>
         </div>
     </div>

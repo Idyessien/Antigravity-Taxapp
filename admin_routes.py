@@ -296,8 +296,18 @@ def dashboard():
         # Default view: Exclude routine logins/logouts to keep the Master Trail clean
         audit_query = audit_query.filter(AuditLog.action.notin_(['LOGIN', 'LOGOUT']))
         
+
     recent_audit_logs = audit_query.limit(100).all()
+    
+    # Group logs by admin profile for the UI
+    grouped_audit_logs = {}
+    for log in recent_audit_logs:
+        if log.admin_email not in grouped_audit_logs:
+            grouped_audit_logs[log.admin_email] = []
+        grouped_audit_logs[log.admin_email].append(log)
+        
     distinct_audit_actions = sorted(list(set(log.action for log in AuditLog.query.all())))
+
     
     # User Details Drawer target if requested
     selected_user_id = request.args.get('inspect_user_id', type=int)
@@ -355,6 +365,7 @@ def dashboard():
         tx_category=tx_category,
         # Module 4
         audit_logs=recent_audit_logs,
+        grouped_audit_logs=grouped_audit_logs,
         distinct_audit_actions=distinct_audit_actions,
         audit_action_filter=audit_action_filter,
         authorized_admin_email=AUTHORIZED_ADMIN_EMAIL
