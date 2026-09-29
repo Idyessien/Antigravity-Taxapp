@@ -26,19 +26,19 @@
     <!-- Module Navigation Tabs -->
     <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3" id="adminTabs" role="tablist">
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if active_tab == 'users' else '' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ \'active text-white\' if active_tab == \'users\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='users') }}">
                 <i class="bi bi-people-fill me-2"></i> 1. User Overview 
                 <span class="badge bg-light text-dark ms-1">{{ total_users }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if active_tab == 'banks' else '' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ \'active text-white\' if active_tab == \'banks\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='banks') }}">
                 <i class="bi bi-bank2 me-2"></i> 2. Platform Analytics </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if active_tab == 'transactions' else '' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ \'active text-white\' if active_tab == \'transactions\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='transactions') }}">
                 <i class="bi bi-receipt-cutoff me-2"></i> 3. Transaction Inspector
                 {% if uncategorized_spikes_count > 0 %}
@@ -47,14 +47,14 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if active_tab == 'audit' else '' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ \'active text-white\' if active_tab == \'audit\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='audit') }}">
                 <i class="bi bi-journal-text me-2"></i> 4. Audit Trail & Roles
                 <span class="badge bg-secondary ms-1">{{ audit_logs|length }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ 'active' if active_tab == 'announcements' else '' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ \'active text-white\' if active_tab == \'announcements\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='announcements') }}">
                 <i class="bi bi-megaphone-fill me-2"></i> 5. Announcements
             </a>
@@ -323,32 +323,23 @@
                         </div>
                     </div>
 
-                    <!-- Linked Bank Institutions -->
+                    
+                    <!-- Activity & Logins -->
                     <h6 class="text-uppercase small fw-bold text-muted mb-2 d-flex justify-content-between">
-                        <span>Linked Bank Accounts</span>
-                        <span class="badge bg-light text-dark border">{{ inspect_user_data.bank_count }}</span>
+                        <span>Login History</span>
+                        <span class="badge bg-primary rounded-pill">{{ inspect_user_data.total_logins }} Total</span>
                     </h6>
-                    {% if inspect_user_data.banks %}
-                    <ul class="list-group list-group-flush mb-3 small">
-                        {% for b in inspect_user_data.banks %}
+                    <ul class="list-group list-group-flush mb-4 small">
+                        {% for log in inspect_user_data.login_history %}
                         <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>{{ b.institution_name }}</strong> 
-                                <span class="text-muted">({{ b.account_type }} ...{{ b.account_mask }})</span>
-                                {% if b.error_message %}
-                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ b.error_message }}</div>
-                                {% endif %}
-                            </div>
-                            <span class="badge {{ 'bg-success' if b.sync_status.value == 'Connected' else ('bg-danger' if b.sync_status.value == 'Sync Error' else 'bg-warning text-dark') }}">
-                                {{ b.sync_status.value }}
-                            </span>
+                            <span><i class="bi bi-box-arrow-in-right text-success me-2"></i> {{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+                            <span class="text-muted" style="font-size: 0.75rem;">IP: {{ log.ip_address }}</span>
                         </li>
+                        {% else %}
+                        <li class="list-group-item px-0 py-2 text-muted fst-italic text-center">No recent login history found.</li>
                         {% endfor %}
                     </ul>
-                    {% else %}
-                    <div class="alert alert-light text-center small text-muted py-2 mb-3">No bank institutions linked yet.</div>
-                    {% endif %}
-
+                    
                     <!-- Support Actions -->
                     <div class="d-grid gap-2">
                         <form action="{{ url_for('admin.impersonate', user_id=inspect_user_data.user.id) }}" method="POST">

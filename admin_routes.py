@@ -292,6 +292,10 @@ def dashboard():
     audit_query = AuditLog.query.order_by(AuditLog.timestamp.desc())
     if audit_action_filter != 'all':
         audit_query = audit_query.filter_by(action=audit_action_filter)
+    else:
+        # Default view: Exclude routine logins/logouts to keep the Master Trail clean
+        audit_query = audit_query.filter(AuditLog.action.notin_(['LOGIN', 'LOGOUT']))
+        
     recent_audit_logs = audit_query.limit(100).all()
     distinct_audit_actions = sorted(list(set(log.action for log in AuditLog.query.all())))
     
@@ -308,7 +312,9 @@ def dashboard():
             'total_income': u_inc_total,
             'net_flow': u_inc_total - u_exp_total,
             'bank_count': len(inspect_user.bank_connections),
-            'banks': inspect_user.bank_connections
+            'banks': inspect_user.bank_connections,
+            'login_history': AuditLog.query.filter_by(target_user_id=inspect_user.id, action='LOGIN').order_by(AuditLog.timestamp.desc()).limit(10).all(),
+            'total_logins': AuditLog.query.filter_by(target_user_id=inspect_user.id, action='LOGIN').count()
         }
 
     return render_admin_view(
