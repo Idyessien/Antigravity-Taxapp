@@ -15,12 +15,17 @@
         </div>
         <h1 class="display-4 fw-bold">TaxOnTheGo</h1>
         <p class="lead text-muted mb-4">Your money. Your taxes. Made simple.</p>
-        <p class="mb-5">Experience real-time tax liability tracking, smart invoicing, and automated financial compliance
-            for Nigerian professionals and businesses.</p>
+        <p class="mb-5 max-w-2xl mx-auto">Experience real-time tax liability tracking, smart invoicing, and automated financial compliance
+            for Nigerian professionals, small businesses, and large corporations.</p>
 
-        <div class="d-flex justify-content-center gap-3">
-            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-5 shadow-sm">Get Started</a>
-            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-5">Login</a>
+        <!-- Main User CTA -->
+        <div class="d-flex flex-wrap justify-content-center gap-3 mb-4">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-5 shadow-sm fw-bold">
+                <i class="bi bi-person-plus-fill me-2"></i>Get Started
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-5 fw-bold">
+                <i class="bi bi-box-arrow-in-right me-2"></i>User Login
+            </a>
         </div>
     </div>
 </div>
@@ -65,8 +70,30 @@
     </div>
 </div>
 
+<!-- Admin Portal Callout Box -->
+<div class="card shadow-sm border-0 mb-5 bg-dark text-white" style="border-radius: 16px;">
+    <div class="card-body p-4 p-md-5 d-flex flex-wrap justify-content-between align-items-center gap-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-danger px-3 py-1 text-uppercase fw-bold"><i class="bi bi-shield-lock-fill me-1"></i> Admin Portal</span>
+                <span class="text-white-50 small">Restricted to <code>idyessien101@gmail.com</code></span>
+            </div>
+            <h4 class="fw-bold text-white mb-1">Administrative Control & Diagnostics</h4>
+            <p class="text-white-50 small mb-0">Search users, view diagnostic bank API health, inspect uncategorized transactions, and monitor audit logs.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('admin.admin_login') }}" class="btn btn-primary btn-lg fw-bold px-4">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Admin Login
+            </a>
+            <a href="{{ url_for('admin.admin_register') }}" class="btn btn-outline-light btn-lg fw-bold px-4">
+                <i class="bi bi-person-badge-fill me-1"></i> Admin Registration
+            </a>
+        </div>
+    </div>
+</div>
+
 <!-- Trust/Footer Section -->
 <div class="text-center text-muted mb-5">
-    <small>© 2025 TaxOnTheGo. Compliant with FIRS & State Tax Regulations.</small>
+    <small>© 2026 TaxOnTheGo. Compliant with FIRS & State Tax Regulations.</small>
 </div>
 {% endblock %}

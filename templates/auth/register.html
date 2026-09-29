@@ -1,37 +1,47 @@
 {% extends "base.html" %}
 {% block guest_content %}
-<h2>Register</h2>
-<form method="POST" id="registerForm">
-    <div class="mb-3">
-        <label>Email</label>
-        <input type="email" name="email" class="form-control" required>
-    </div>
-    <div class="mb-3">
-        <label>Password</label>
-        <input type="password" name="password" class="form-control" required>
-    </div>
-    <div class="mb-3">
-        <label>Profile Type</label>
-        <select name="profile_type" id="profileType" class="form-control" onchange="toggleFields()" required>
-            {% for type in profile_types %}
-            <option value="{{ type.value }}">{{ type.value }}</option>
-            {% endfor %}
-        </select>
-    </div>
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0" style="border-radius: 12px;">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold text-dark">Create Your Account</h3>
+                    <p class="text-muted">Start tracking taxes and wealth with TaxOnTheGo</p>
+                </div>
+                
+                <form method="POST" id="registerForm">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Email Address</label>
+                        <input type="email" name="email" class="form-control form-control-lg bg-light border-0" required placeholder="name@example.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Password</label>
+                        <input type="password" name="password" class="form-control form-control-lg bg-light border-0" required placeholder="••••••••">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Profile Type</label>
+                        <select name="profile_type" id="profileType" class="form-select form-select-lg bg-light border-0" onchange="toggleFields()" required>
+                            {% for type in profile_types %}
+                            <option value="{{ type.value }}">{{ type.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-    <!-- Individual Subtype Removed -->
+                    <div class="mb-3 d-none" id="businessFields">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Industry</label>
+                        <select name="industry" class="form-select form-select-lg bg-light border-0">
+                            {% for ind in industries %}
+                            <option value="{{ ind.value }}">{{ ind.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-    <div class="mb-3 d-none" id="businessFields">
-        <label>Industry</label>
-        <select name="industry" class="form-control">
-            {% for ind in industries %}
-            <option value="{{ ind.value }}">{{ ind.value }}</option>
-            {% endfor %}
-        </select>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm mb-3">Register</button>
+                </form>
+            </div>
+        </div>
     </div>
-
-    <button type="submit" class="btn btn-primary">Register</button>
-</form>
+</div>
 
 <script>
     function toggleFields() {

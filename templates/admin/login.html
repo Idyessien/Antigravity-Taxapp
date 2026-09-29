@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block guest_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0" style="border-radius: 16px; background: var(--glass-bg, #ffffff); backdrop-filter: blur(15px);">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3 shadow-sm" 
+                         style="width: 64px; height: 64px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #38bdf8;">
+                        <i class="bi bi-shield-lock-fill fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-1">Admin Portal</h3>
+                    <p class="text-muted small">Restricted Master Control Center for TaxOnTheGo</p>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1">
+                        <i class="bi bi-lock-fill me-1"></i> Authorized Access Only
+                    </span>
+                </div>
+
+                <form method="POST" action="{{ url_for('admin.admin_login') }}">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Admin Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-envelope-fill text-muted"></i></span>
+                            <input type="email" name="email" class="form-control form-control-lg bg-light border-0" 
+                                   required value="idyessien101@gmail.com" placeholder="idyessien101@gmail.com">
+                        </div>
+                        <small class="text-muted" style="font-size: 0.75rem;">Access is strictly locked to the master administrator account.</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Admin Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-key-fill text-muted"></i></span>
+                            <input type="password" name="password" class="form-control form-control-lg bg-light border-0" 
+                                   required placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark btn-lg w-100 fw-bold shadow-sm mb-3" 
+                            style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Sign In to Admin Control Center
+                    </button>
+                    
+                    <div class="text-center pt-3 border-top">
+                        <p class="small text-muted mb-1">Need to initialize or reset your master admin account?</p>
+                        <a href="{{ url_for('admin.admin_register') }}" class="small fw-bold text-decoration-none text-primary">
+                            <i class="bi bi-person-plus-fill me-1"></i> Register / Upgrade Master Admin Account
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

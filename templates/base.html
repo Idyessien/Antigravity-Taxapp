@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nigerian Tax Calculator</title>
+    <title>TaxOnTheGo - Smart Nigerian Tax & Wealth Platform</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
@@ -16,9 +16,12 @@
     <!-- Impersonation Security Banner -->
     {% if session.get('impersonating_admin_id') %}
     <div class="bg-warning text-dark text-center py-2 fw-bold shadow-sm" style="position: sticky; top: 0; z-index: 1050; border-bottom: 3px solid #ffcc00;">
-        <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i> You are currently impersonating <strong>{{ current_user.email }}</strong>. 
+        <i class="bi bi-shield-shaded text-danger me-2"></i> 
+        <span>Support Mode: You are viewing as <strong>{{ current_user.email }}</strong> (Read-Only Diagnostics)</span>
         <form action="{{ url_for('admin.revert_impersonation') }}" method="POST" class="d-inline ms-3">
-            <button type="submit" class="btn btn-sm btn-dark fw-bold px-3">Return to Admin</button>
+            <button type="submit" class="btn btn-sm btn-dark fw-bold px-3 shadow-sm">
+                <i class="bi bi-box-arrow-left me-1"></i> Return to Admin Control Center
+            </button>
         </form>
     </div>
     {% endif %}
@@ -98,11 +101,11 @@
                     </ul>
                 </li>
 
-                {% if current_user.is_admin %}
+                {% if current_user.is_admin and current_user.email.lower() == 'idyessien101@gmail.com' %}
                 <li>
                     <a href="{{ url_for('admin.dashboard') }}"
-                        class="{{ 'active' if request.endpoint == 'admin.dashboard' }}">
-                        <i class="bi bi-shield-lock-fill text-danger"></i> Admin Panel
+                        class="{{ 'active' if 'admin' in request.endpoint }}">
+                        <i class="bi bi-shield-lock-fill text-danger"></i> Admin Control Center
                     </a>
                 </li>
                 {% endif %}
@@ -131,6 +134,9 @@
                     </button>
 
                     <div class="ms-auto d-flex align-items-center">
+                        <button type="button" class="btn btn-primary rounded-pill px-3 py-1 me-3 d-flex align-items-center shadow-sm" data-bs-toggle="modal" data-bs-target="#quickAddModal">
+                            <i class="bi bi-plus-lg me-1 fw-bold"></i> Quick Add
+                        </button>
                         <div class="dropdown">
                             <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark"
                                 id="userMenu" data-bs-toggle="dropdown">
@@ -138,14 +144,19 @@
                                     style="width: 32px; height: 32px;">
                                     {{ current_user.email[0].upper() }}
                                 </div>
-                                <span class="d-none d-sm-inline">{{ current_user.email }}</span>
+                                <span class="d-none d-md-inline">{{ current_user.email }}</span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end text-small shadow">
-                                <li><a class="dropdown-item" href="{{ url_for('settings.settings') }}">Profile</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                {% if current_user.is_admin and current_user.email.lower() == 'idyessien101@gmail.com' %}
+                                <li><a class="dropdown-item text-danger fw-bold" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-shield-lock-fill me-2"></i>Admin Center</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{{ url_for('settings.settings') }}">Profile & Settings</a></li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
-                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Sign out</a></li>
+                                <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">Logout</a>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -153,10 +164,14 @@
             </nav>
 
             <div class="container-fluid p-4">
-                {% with messages = get_flashed_messages() %}
+                {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-info shadow-sm border-0">{{ message }}</div>
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show"
+                    role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
                 {% endfor %}
                 {% endif %}
                 {% endwith %}
@@ -164,19 +179,11 @@
                 {% block content %}{% endblock %}
             </div>
         </div>
-        
-        <!-- Global Quick Add FAB -->
-        <button class="btn btn-primary shadow-lg" 
-                style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; font-size: 28px; z-index: 1050; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;"
-                onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"
-                data-bs-toggle="modal" data-bs-target="#quickAddModal">
-            <i class="bi bi-plus"></i>
-        </button>
 
-        <!-- Quick Add Modal -->
-        <div class="modal fade" id="quickAddModal" tabindex="-1">
+        <!-- Global Quick Add Modal -->
+        <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg">
+                <div class="modal-content shadow-lg border-0" style="border-radius: 1rem;">
                     <div class="modal-header border-0 bg-primary text-white" style="border-radius: 0.5rem 0.5rem 0 0;">
                         <h5 class="modal-title fw-bold"><i class="bi bi-lightning-fill"></i> Quick Entry</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -230,14 +237,14 @@
                                         <label class="form-label text-muted small fw-bold">Amount</label>
                                         <div class="input-group input-group-lg">
                                             <span class="input-group-text bg-light border-end-0">₦</span>
-                                            <input type="text" name="amount" class="form-control border-start-0 currency-input fw-bold text-success" placeholder="0.00" required>
+                                            <input type="text" name="amount" class="form-control border-start-0 currency-input fw-bold" placeholder="0.00" required>
                                         </div>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label text-muted small fw-bold">Source</label>
+                                        <label class="form-label text-muted small fw-bold">Income Type / Source</label>
                                         <select name="income_type" class="form-select" required>
-                                            {% for type in global_income_types %}
-                                            <option value="{{ type.value }}">{{ type.value }}</option>
+                                            {% for itype in global_income_types %}
+                                            <option value="{{ itype.value }}">{{ itype.value }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -262,6 +269,7 @@
         </div>
 
     </div>
+
     {% else %}
     <!-- Login/Register Layout (Centered) -->
     <nav class="navbar navbar-legacy navbar-expand-lg navbar-dark bg-dark">
@@ -281,15 +289,19 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Login</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.register') }}">Register</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-semibold ms-lg-2" href="{{ url_for('admin.admin_login') }}"><i class="bi bi-shield-lock-fill me-1"></i>Admin Portal</a></li>
                 </ul>
             </div>
         </div>
     </nav>
     <div class="container mt-5">
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-info">{{ message }}</div>
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
         {% endfor %}
         {% endif %}
         {% endwith %}
@@ -305,34 +317,20 @@
 
             currencyInputs.forEach(input => {
                 input.addEventListener('input', function (e) {
-                    // 1. Get raw value, strip non-digits (allow one decimal point if needed, for now pure integers or standard float logic)
                     let value = e.target.value;
-
-                    // Remove existing commas to get raw number string
                     value = value.replace(/,/g, '');
 
-                    // Check if perfectly valid number (allow empty)
                     if (value === '' || isNaN(value)) {
-                        // If user types non-numeric, strip it? For now, let's just strip non-digit/dot
                         value = value.replace(/[^0-9.]/g, '');
                     }
 
-                    // 2. Format with commas
                     if (value) {
-                        // Split decimal to handle typing '1000.'
                         const parts = value.split('.');
                         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
                         e.target.value = parts.join('.');
                     }
                 });
             });
-
-            // Restrict Date Inputs: Removed global "No Future Dates" constraint to allow Planning features
-            // const today = new Date().toISOString().split('T')[0];
-            // document.querySelectorAll('input[type="date"]').forEach(input => {
-            //    input.setAttribute('max', today);
-            // });
 
             // Restore Sidebar Mobile Logic
             const sidebarCollapse = document.getElementById('sidebarCollapse');
