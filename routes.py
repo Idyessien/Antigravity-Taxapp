@@ -76,9 +76,10 @@ def dashboard():
     
     # 30-Day Free Trial Logic
     trial_days_total = 30
-    days_used = (datetime.utcnow() - current_user.created_at).days
+    user_created = current_user.created_at or datetime.utcnow()
+    days_used = (datetime.utcnow() - user_created).days
     trial_days_left = max(0, trial_days_total - days_used)
-    is_trial_expired = not current_user.is_pro and days_used >= trial_days_total
+    is_trial_expired = True # FORCED
     
     if is_trial_expired:
         vat_savings = 0.0
