@@ -6,7 +6,7 @@ from functools import wraps
 from flask import Blueprint, render_template, abort, Response, request, redirect, url_for, flash, session, jsonify, current_app
 from flask_login import login_required, current_user, login_user, logout_user
 from extensions import bcrypt
-from models import db, User, Expense, Income, Announcement, ProfileType, BankConnection, BankConnectionSyncStatus, CategorizationRule, AuditLog, Category
+from models import db, User, Expense, Income, Announcement, ProfileType, BankConnection, BankConnectionSyncStatus, CategorizationRule, AuditLog, Category, Investment, Invoice
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -225,6 +225,12 @@ def dashboard():
     total_expenses = db.session.query(db.func.sum(Expense.amount)).scalar() or 0
     total_income = db.session.query(db.func.sum(Income.amount)).scalar() or 0
     
+    # Platform Analytics Metrics
+    total_invoices_count = Invoice.query.count()
+    total_wealth_assets = db.session.query(db.func.sum(Investment.total_value)).scalar() or 0
+    
+    # Estimated Taxes Calculated (We can just sum up income for now as a proxy, or pass dummy if needed)
+    total_taxes_calculated = total_income * 0.05 # Mock for now until tax records are saved in DB
     # 2. Module 2: Bank Connections & Diagnostics
     bank_institution_filter = request.args.get('bank_inst', 'all')
     bank_status_filter = request.args.get('bank_status', 'all')
@@ -324,6 +330,9 @@ def dashboard():
         inspect_user_data=inspect_user_data,
         # Module 2
         bank_connections=filtered_bank_connections,
+        total_invoices_count=total_invoices_count,
+        total_wealth_assets=total_wealth_assets,
+        total_taxes_calculated=total_taxes_calculated,
         total_banks=total_banks_count,
         bank_sync_errors=bank_sync_errors_count,
         bank_mfa_required=bank_mfa_required_count,

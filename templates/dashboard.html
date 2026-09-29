@@ -1,6 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container">
+    {% if not current_user.is_pro %}
+        {% if is_trial_expired %}
+        <div class="alert alert-danger fw-bold shadow-sm d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-lock-fill me-2"></i> Your 30-day free trial for Tax Calculations has expired. Upgrade to Pro to continue using the tax estimator.</span>
+            <a href="#" class="btn btn-danger btn-sm rounded-pill px-3">Upgrade Now</a>
+        </div>
+        {% else %}
+        <div class="alert alert-info shadow-sm d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-clock-history me-2"></i> Free Trial: You have <strong>{{ trial_days_left }} days</strong> left of free tax calculations.</span>
+            <a href="#" class="btn btn-outline-primary btn-sm rounded-pill px-3">Upgrade to Pro</a>
+        </div>
+        {% endif %}
+    {% endif %}
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>Overview</h1>
         <div class="btn-group">
@@ -106,20 +119,29 @@
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <h5 class="card-title text-primary"><i class="bi bi-shield-lock-fill"></i> Tax Estimator</h5>
+                        {% if is_trial_expired %}
+                        <p class="mb-0 text-muted">
+                            <i class="bi bi-lock-fill text-danger"></i> <em>Tax calculation locked. Upgrade to Pro to see your real-time tax liability.</em>
+                        </p>
+                        {% else %}
                         <p class="mb-0">
                             Based on your earnings, you may pay an estimate of
-                            <span class="badge bg-primary fs-6">₦ {{ "{:,.2f}".format(tax_info.total_tax) }}</span>
+                            <span class="badge bg-primary fs-6">&#8358; {{ "{:,.2f}".format(tax_info.total_tax) }}</span>
                             by the next filing date.
                         </p>
                         <small class="text-muted d-block mt-2">
-                            💡 <strong>Pro-Tip:</strong> You can lower this bill by documenting your Rent (up to 20%
+                            &#128161; <strong>Pro-Tip:</strong> You can lower this bill by documenting your Rent (up to 20%
                             relief) and maximize your future wealth by investing in Government Bonds, which are 100%
                             tax-free.
                         </small>
+                        {% endif %}
                     </div>
                     <div>
-                        <a href="{{ url_for('investment.wealth_dashboard') }}" class="btn btn-primary">Invest to
-                            Save</a>
+                        {% if is_trial_expired %}
+                        <a href="#" class="btn btn-danger">Upgrade to Unlock</a>
+                        {% else %}
+                        <a href="{{ url_for('investment.wealth_dashboard') }}" class="btn btn-primary">Invest to Save</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

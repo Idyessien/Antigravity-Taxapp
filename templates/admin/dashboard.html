@@ -35,13 +35,7 @@
         <li class="nav-item">
             <a class="nav-link {{ 'active' if active_tab == 'banks' else '' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='banks') }}">
-                <i class="bi bi-bank2 me-2"></i> 2. Bank Sync & Diagnostics 
-                {% if bank_sync_errors > 0 %}
-                <span class="badge bg-danger ms-1">{{ bank_sync_errors }} Error{{ 's' if bank_sync_errors > 1 else '' }}</span>
-                {% else %}
-                <span class="badge bg-success ms-1">{{ bank_health_rate }}% Health</span>
-                {% endif %}
-            </a>
+                <i class="bi bi-bank2 me-2"></i> 2. Platform Analytics </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {{ 'active' if active_tab == 'transactions' else '' }} fw-bold px-3 shadow-sm" 

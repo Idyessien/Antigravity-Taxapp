@@ -70,9 +70,20 @@ def onboarding_complete():
 def dashboard():
     from tax_logic import calculate_vat_savings, calculate_nigeria_tax
     from models import WHTCredit
+    from datetime import datetime
     
-    vat_savings = calculate_vat_savings(current_user.id)
-    tax_info = calculate_nigeria_tax(current_user)
+    # 30-Day Free Trial Logic
+    trial_days_total = 30
+    days_used = (datetime.utcnow() - current_user.created_at).days
+    trial_days_left = max(0, trial_days_total - days_used)
+    is_trial_expired = not current_user.is_pro and days_used >= trial_days_total
+    
+    if is_trial_expired:
+        vat_savings = 0.0
+        tax_info = {'total_tax': 0, 'tax_details': [], 'breakdown': {}}
+    else:
+        vat_savings = calculate_vat_savings(current_user.id)
+        tax_info = calculate_nigeria_tax(current_user)
     
     # WHT Logic
     credits = WHTCredit.query.filter_by(user_id=current_user.id, is_utilized=False).all()
@@ -85,8 +96,8 @@ def dashboard():
     from alerts_logic import check_growth_alerts, get_ai_suggestions
     
     # Alerts & AI
-    alerts = check_growth_alerts(current_user, tax_info)
-    ai_suggestions = get_ai_suggestions(current_user, tax_info, vat_savings)
+    alerts = check_growth_alerts(current_user, tax_info) if not is_trial_expired else []
+    ai_suggestions = get_ai_suggestions(current_user, tax_info, vat_savings) if not is_trial_expired else []
     
     # Chart Data Preparation (Prompt: "Pull graphs on demand")
     # 1. Expenses by Category
@@ -189,4 +200,6 @@ def dashboard():
                            monthly_income=monthly_income,
                            monthly_expenses=monthly_expenses,
                            monthly_unspent=monthly_unspent,
-                           potential_savings_pct=potential_savings_pct)
+                           potential_savings_pct=potential_savings_pct,
+                           is_trial_expired=is_trial_expired,
+                           trial_days_left=trial_days_left)
