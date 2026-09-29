@@ -26,19 +26,19 @@
     <!-- Module Navigation Tabs -->
     <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3" id="adminTabs" role="tablist">
         <li class="nav-item">
-            <a class="nav-link {{ \'active text-white\' if active_tab == \'users\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active text-white' if active_tab == 'users' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='users') }}">
                 <i class="bi bi-people-fill me-2"></i> 1. User Overview 
                 <span class="badge bg-light text-dark ms-1">{{ total_users }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ \'active text-white\' if active_tab == \'banks\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active text-white' if active_tab == 'banks' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='banks') }}">
                 <i class="bi bi-bank2 me-2"></i> 2. Platform Analytics </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ \'active text-white\' if active_tab == \'transactions\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active text-white' if active_tab == 'transactions' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='transactions') }}">
                 <i class="bi bi-receipt-cutoff me-2"></i> 3. Transaction Inspector
                 {% if uncategorized_spikes_count > 0 %}
@@ -47,14 +47,14 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ \'active text-white\' if active_tab == \'audit\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active text-white' if active_tab == 'audit' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='audit') }}">
                 <i class="bi bi-journal-text me-2"></i> 4. Audit Trail & Roles
                 <span class="badge bg-secondary ms-1">{{ audit_logs|length }}</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ \'active text-white\' if active_tab == \'announcements\' else \'text-secondary\' }} fw-bold px-3 shadow-sm" 
+            <a class="nav-link {{ 'active text-white' if active_tab == 'announcements' else 'text-secondary' }} fw-bold px-3 shadow-sm" 
                href="{{ url_for('admin.dashboard', tab='announcements') }}">
                 <i class="bi bi-megaphone-fill me-2"></i> 5. Announcements
             </a>
