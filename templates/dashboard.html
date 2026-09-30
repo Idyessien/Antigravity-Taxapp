@@ -150,16 +150,47 @@
 
     <!-- 3. Financial Analytics (Charts) -->
     <div class="row">
-        <div class="col-md-6 mb-4">
+        <div class="col-12 mb-3 d-flex justify-content-end">
+            <div class="btn-group shadow-sm" role="group" id="timeframeToggle">
+                <input type="radio" class="btn-check" name="btnradio" id="btnMonthly" autocomplete="off" checked value="monthly">
+                <label class="btn btn-outline-primary fw-bold px-4" for="btnMonthly">Monthly</label>
+
+                <input type="radio" class="btn-check" name="btnradio" id="btnYearly" autocomplete="off" value="yearly">
+                <label class="btn btn-outline-primary fw-bold px-4" for="btnYearly">Yearly</label>
+
+                <input type="radio" class="btn-check" name="btnradio" id="btnAllTime" autocomplete="off" value="all_time">
+                <label class="btn btn-outline-primary fw-bold px-4" for="btnAllTime">All Time</label>
+            </div>
+        </div>
+
+        <div class="col-md-7 mb-4">
             <div class="card shadow-sm h-100 border-0 rounded-4">
                 <div class="card-body p-4">
-                    <h5 class="card-title text-muted mb-4 fw-bold">Expenses Breakdown</h5>
-                    <div style="height: 300px; position: relative;">
-                        <canvas id="expenseChart"></canvas>
+                    <h5 class="card-title text-dark mb-4 fw-bold">Budget vs. Actual</h5>
+                    <div id="budgetBarsContainer" class="d-flex flex-column gap-3 pe-2" style="max-height: 350px; overflow-y: auto;">
+                        <!-- Budget bars will be injected here via JS -->
                     </div>
                 </div>
             </div>
         </div>
+        
+        <div class="col-md-5 mb-4">
+            <div class="card shadow-sm h-100 border-0 rounded-4">
+                <div class="card-body p-4 text-center">
+                    <h5 class="card-title text-dark mb-4 fw-bold">Cash Flow Overview</h5>
+                    <div style="height: 280px; position: relative; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="compChart"></canvas>
+                        <!-- Center metric overlay -->
+                        <div id="centerMetric" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; margin-top: -15px;">
+                            <div class="text-muted small fw-bold text-uppercase">Total Income</div>
+                            <div id="centerMetricValue" class="fs-4 fw-bold text-dark">&#8358;0.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
         <div class="col-md-6 mb-4">
             <div class="card shadow-sm h-100 border-0 rounded-4">
                 <div class="card-body p-4">
@@ -175,100 +206,114 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Data from Flask
-    const expenseLabels = {{ expense_labels | tojson }};
-    const expenseValues = {{ expense_values | tojson }};
-    const compLabels = {{ comp_labels | tojson }};
-    const compValues = {{ comp_values | tojson }};
-
-    function formatCurrency(value) {
-        return '₦' + value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    // Expense Chart
-    const ctxExp = document.getElementById('expenseChart').getContext('2d');
+document.addEventListener('DOMContentLoaded', function () {
+    const dashboardData = {{ dashboard_data | tojson }};
     
-    // Create subtle gradient
-    let gradientExp = ctxExp.createLinearGradient(0, 0, 0, 400);
-    gradientExp.addColorStop(0, 'rgba(54, 162, 235, 0.8)');
-    gradientExp.addColorStop(1, 'rgba(54, 162, 235, 0.2)');
-
-    new Chart(ctxExp, {
-        type: 'bar',
-        data: {
-            labels: expenseLabels,
-            datasets: [{
-                label: 'Expenses',
-                data: expenseValues,
-                backgroundColor: gradientExp,
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 2,
-                borderRadius: 8,
-                borderSkipped: false,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-                duration: 1500,
-                easing: 'easeOutQuart'
+    function formatCurrency(value) {
+        return '&#8358;' + value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    
+    let compChartInstance = null;
+    
+    function renderBudgetBars(data) {
+        const container = document.getElementById('budgetBarsContainer');
+        container.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center mt-5">No expense data available for this period.</div>';
+            return;
+        }
+        
+        data.forEach(item => {
+            const bgClass = item.raw_pct > 100 ? 'bg-danger' : (item.raw_pct > 85 ? 'bg-warning' : 'bg-primary');
+            const textClass = item.raw_pct > 100 ? 'text-danger' : (item.raw_pct > 85 ? 'text-warning' : 'text-success');
+            
+            // Format strings for budget
+            const actualStr = formatCurrency(item.actual);
+            const budgetStr = item.budget > 0 ? formatCurrency(item.budget) : 'No Budget';
+            
+            const html = `
+                <div class="budget-row mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-bold small text-dark">${item.category}</span>
+                        <span class="small text-muted fw-bold">${actualStr} / ${budgetStr} <span class="${textClass} ms-1">(${item.status})</span></span>
+                    </div>
+                    <div class="progress" style="height: 10px; border-radius: 5px; background-color: #e9ecef;">
+                        <div class="progress-bar ${bgClass}" role="progressbar" style="width: ${item.pct}%" aria-valuenow="${item.pct}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+    
+    function renderDonutChart(cashFlow) {
+        const ctx = document.getElementById('compChart').getContext('2d');
+        
+        // Update center text
+        document.getElementById('centerMetricValue').innerHTML = formatCurrency(cashFlow.income);
+        
+        if (compChartInstance) {
+            compChartInstance.destroy();
+        }
+        
+        const labels = ['Savings', 'Investment', 'Expenses'];
+        const values = [cashFlow.savings, cashFlow.investment, cashFlow.expenses];
+        const colors = ['#10b981', '#3b82f6', '#ef4444']; 
+        
+        compChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
             },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) { return formatCurrency(context.raw); }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: { family: "'Inter', sans-serif", size: 12 }
+                        }
                     },
-                    padding: 10,
-                    cornerRadius: 8,
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { borderDash: [5, 5], color: '#e9ecef', drawBorder: false },
-                    ticks: { callback: function(value) { return '₦' + value.toLocaleString(); } }
-                },
-                x: {
-                    grid: { display: false }
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.raw || 0;
+                                let total = context.chart._metasets[context.datasetIndex].total;
+                                let percentage = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
+                                return ` ${context.label}: ${formatCurrency(val).replace('&#8358;', '₦')} (${percentage})`;
+                            }
+                        }
+                    }
                 }
             }
-        }
+        });
+    }
+    
+    function updateDashboard(timeframe) {
+        const data = dashboardData[timeframe];
+        renderBudgetBars(data.budget_vs_actual);
+        renderDonutChart(data.cash_flow);
+    }
+    
+    document.querySelectorAll('input[name="btnradio"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            updateDashboard(e.target.value);
+        });
     });
-
-    // Cash Flow Chart (Using Comp Data)
-    const ctxComp = document.getElementById('compChart').getContext('2d');
-    new Chart(ctxComp, {
-        type: 'doughnut',
-        data: {
-            labels: compLabels,
-            datasets: [{
-                data: compValues,
-                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
-                borderWidth: 0,
-                hoverOffset: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%',
-            animation: {
-                animateScale: true,
-                duration: 1200
-            },
-            plugins: {
-                legend: { position: 'bottom', labels: { padding: 20, font: { weight: 'bold' } } },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) { return ' ' + formatCurrency(context.raw); }
-                    },
-                    padding: 10,
-                    cornerRadius: 8
-                }
-            }
-        }
-    });
+    
+    // Init
+    updateDashboard('monthly');
+});
 </script>
 {% endblock %}

@@ -240,13 +240,30 @@ def expenses():
     from models import Subscription
     subscriptions = Subscription.query.filter_by(user_id=current_user.id).order_by(Subscription.next_due_date).all()
     
+    # Compute Category Breakdown for Hero View
+    expense_breakdown = {}
+    total_expenses = 0.0
+    for exp in recent_expenses:
+        cat_name = exp.category.name if exp.category else "Uncategorized"
+        expense_breakdown[cat_name] = expense_breakdown.get(cat_name, 0.0) + exp.amount
+        total_expenses += exp.amount
+        
+    breakdown_list = [{"name": k, "amount": v} for k, v in expense_breakdown.items()]
+    breakdown_list.sort(key=lambda x: x["amount"], reverse=True)
+    
+    hero_data = {
+        "total": total_expenses,
+        "breakdown": breakdown_list
+    }
+
     return render_template('expenses.html', 
                            categories=categories, 
                            category_groups=category_groups,
                            budget_map=budget_map,
                            recent_expenses=recent_expenses,
                            budget_status=budget_status,
-                           subscriptions=subscriptions)
+                           subscriptions=subscriptions,
+                           hero_data=hero_data)
 
 @settings_bp.route('/expenses/add', methods=['POST'])
 @login_required

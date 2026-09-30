@@ -102,58 +102,105 @@ def dashboard():
     alerts = check_growth_alerts(current_user, tax_info) if not is_trial_expired else []
     ai_suggestions = get_ai_suggestions(current_user, tax_info, vat_savings) if not is_trial_expired else []
     
-    # Chart Data Preparation (Prompt: "Pull graphs on demand")
-    # 1. Expenses by Category
-    from models import Category, Expense, Income, Investment
-    from sqlalchemy import func
-    
-    expense_data = db.session.query(Category.group, func.sum(Expense.amount))\
-        .join(Expense)\
-        .filter(Expense.user_id == current_user.id)\
-        .group_by(Category.group).all()
-    expense_labels = [e[0] for e in expense_data]
-    expense_values = [e[1] for e in expense_data]
-    
-    # 2. Income vs Investment (Composition)
-    total_income = tax_info.get('gross_income', 0)
-    # Get total investment value
-    investments = Investment.query.filter_by(user_id=current_user.id).all()
-    total_investment = sum((i.total_value or 0) for i in investments)
-    
-    # 3. Monthly Trends (Income vs Expense) - Advanced
-    # Group by Month
-    # Simplified for MVP: Monthly Cash Flow
-    
+    # Chart Data Preparation (Budget vs Actual & Cash Flow)
+    from models import Category, Expense, Income, Investment, Budget
+    from sqlalchemy import func, extract
     from datetime import datetime
+    import json
+    
     now = datetime.utcnow()
     current_month_start = datetime(now.year, now.month, 1)
     
-    # Monthly Income
-    monthly_income = db.session.query(func.sum(Income.amount))\
-        .filter(Income.user_id == current_user.id, Income.date >= current_month_start).scalar() or 0.0
+    def get_financials(time_filter=None):
+        # Base queries
+        exp_q = db.session.query(Category.group, func.sum(Expense.amount)).join(Expense).filter(Expense.user_id == current_user.id)
+        inc_q = db.session.query(func.sum(Income.amount)).filter(Income.user_id == current_user.id)
+        inv_q = db.session.query(func.sum(Investment.total_value)).filter(Investment.user_id == current_user.id)
         
-    # Monthly Expenses
-    monthly_expenses = db.session.query(func.sum(Expense.amount))\
-        .filter(Expense.user_id == current_user.id, Expense.date >= current_month_start).scalar() or 0.0
+        multiplier = 1
+        if time_filter == 'monthly':
+            exp_q = exp_q.filter(Expense.date >= current_month_start)
+            inc_q = inc_q.filter(Income.date >= current_month_start)
+            inv_q = inv_q.filter(Investment.created_at >= current_month_start)
+        elif time_filter == 'yearly':
+            exp_q = exp_q.filter(extract('year', Expense.date) == now.year)
+            inc_q = inc_q.filter(extract('year', Income.date) == now.year)
+            inv_q = inv_q.filter(extract('year', Investment.created_at) == now.year)
+            multiplier = 12
+        else: # all_time
+            # For all-time budget multiplier, approximate months since created
+            user_created = current_user.created_at or datetime.utcnow()
+            months_active = (now.year - user_created.year) * 12 + now.month - user_created.month + 1
+            multiplier = max(1, months_active)
+            
+        exp_data = exp_q.group_by(Category.group).all()
         
-    # Unspent (Brought Forward logic context, but here it's monthly surplus)
-    monthly_unspent = monthly_income - monthly_expenses
-    
-    # Tax Optimization Nudge
-    # Estimated Annual Tax: tax_info.get('total_tax', 0)
-    # Potential Reduction: Assume 50% reduction possible via max relief (Pension + Bonds)
-    est_tax = tax_info.get('total_tax', 0)
-    potential_savings_pct = 0.0
-    if est_tax > 0:
-        # Dummy logic for "Calculate percent"
-        # If they haven't maxed out Pension (8%) and Life Insurance/NHF, they can save.
-        # Let's say potential is 20% of tax if they optimize.
-        potential_savings_pct = 20.0
-    
-    comparison_labels = ['Monthly Income', 'Monthly Expenses', 'Unspent']
-    comparison_values = [monthly_income, monthly_expenses, max(0, monthly_unspent)]
+        # Build Actuals map
+        actuals_map = {e[0]: e[1] for e in exp_data}
+        
+        # Get Budgets
+        budgets_data = db.session.query(Category.group, func.sum(Budget.monthly_limit)).join(Budget).filter(Budget.user_id == current_user.id).group_by(Category.group).all()
+        budgets_map = {b[0]: (b[1] * multiplier) for b in budgets_data}
+        
+        # Merge categories (we want to show all categories that have either budget or actual)
+        all_categories = set(actuals_map.keys()).union(set(budgets_map.keys()))
+        
+        budget_vs_actual = []
+        for cat in all_categories:
+            actual = actuals_map.get(cat, 0.0)
+            budget = budgets_map.get(cat, 0.0)
+            
+            if budget > 0:
+                pct = (actual / budget) * 100
+            else:
+                pct = 100 if actual > 0 else 0
+                
+            status = "On Track"
+            if budget > 0:
+                if pct > 100: status = "OVER BUDGET"
+                elif pct < 85: status = "Under Budget"
+                elif pct >= 85: status = "Warning"
+                
+            budget_vs_actual.append({
+                "category": cat,
+                "budget": budget,
+                "actual": actual,
+                "pct": min(100, pct), 
+                "raw_pct": pct,       
+                "status": status
+            })
+            
+        budget_vs_actual.sort(key=lambda x: x['actual'], reverse=True)
+        
+        inc_total = inc_q.scalar() or 0.0
+        exp_total = sum(actuals_map.values())
+        inv_total = inv_q.scalar() or 0.0
+        
+        savings_total = max(0.0, inc_total - exp_total - inv_total)
+        
+        return {
+            "budget_vs_actual": budget_vs_actual,
+            "cash_flow": {
+                "income": inc_total,
+                "expenses": exp_total,
+                "investment": inv_total,
+                "savings": savings_total
+            }
+        }
+        
+    dashboard_data = {
+        "monthly": get_financials("monthly"),
+        "yearly": get_financials("yearly"),
+        "all_time": get_financials("all_time")
+    }
 
+    
+    # Investments
+    investments = Investment.query.filter_by(user_id=current_user.id).all()
+    total_investment = sum((i.total_value or 0) for i in investments)
+    
     # --- Profile Specific Logic ---
+
     net_worth = 0.0
     business_metrics = {}
     
@@ -196,13 +243,9 @@ def dashboard():
                            business_metrics=business_metrics,
                            ProfileType=ProfileType, # Pass Enum to template
                            # Chart Data
-                           expense_labels=expense_labels,
-                           expense_values=expense_values,
-                           comp_labels=comparison_labels,
-                           comp_values=comparison_values,
-                           monthly_income=monthly_income,
-                           monthly_expenses=monthly_expenses,
-                           monthly_unspent=monthly_unspent,
-                           potential_savings_pct=potential_savings_pct,
+                           dashboard_data=dashboard_data,
+                           monthly_income=dashboard_data['monthly']['cash_flow']['income'],
+                           monthly_expenses=dashboard_data['monthly']['cash_flow']['expenses'],
+                           monthly_unspent=dashboard_data['monthly']['cash_flow']['income'] - dashboard_data['monthly']['cash_flow']['expenses'],
                            is_trial_expired=is_trial_expired,
                            trial_days_left=trial_days_left)
