@@ -239,10 +239,13 @@ def _calculate_business_tax(user, year):
     revenue = actual_revenue 
     
     # Calculate Profit
+    from models import Category
     total_exp = (
         Expense.query
+        .join(Category)
         .filter(Expense.user_id == user.id)
         .filter(Expense.date >= start_date, Expense.date <= end_date)
+        .filter(Category.name != 'Investments & Savings')
         .with_entities(func.sum(Expense.amount))
         .scalar()
     ) or 0.0
@@ -262,7 +265,7 @@ def _calculate_business_tax(user, year):
     # Logic
     if is_prof_services:
         cit_tax = max(0, profit) * cit_rate
-        dev_levy_rate = 0.03 # Tertiary Education Tax (3%)
+        dev_levy_rate = 0.04 # Tertiary Education Tax (3%)
     else:
         # Standard Rules
         if revenue <= 25000000:
@@ -272,12 +275,12 @@ def _calculate_business_tax(user, year):
         elif 25000000 < revenue <= 100000000:
             # Medium Company (25M - 100M): 20% CIT
             cit_tax = max(0, profit) * cit_rate
-            dev_levy_rate = 0.03 # TET applies
+            dev_levy_rate = 0.04 # TET applies
             vat_enabled = True # VAT limit is 25M turnover
         else:
             # Large Company (>100M): 30% CIT
             cit_tax = max(0, profit) * cit_rate
-            dev_levy_rate = 0.03
+            dev_levy_rate = 0.04
             vat_enabled = True
             
     # Education Tax / Dev Levy logic
@@ -313,10 +316,13 @@ def _calculate_profit(user, year):
         .scalar()
     ) or 0.0
     
+    from models import Category
     total_exp = (
         Expense.query
+        .join(Category)
         .filter(Expense.user_id == user.id)
         .filter(Expense.date >= start_date, Expense.date <= end_date)
+        .filter(Category.name != 'Investments & Savings')
         .with_entities(func.sum(Expense.amount))
         .scalar()
     ) or 0.0

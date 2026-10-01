@@ -145,7 +145,7 @@
 
                         <!-- WHT Credits Section -->
                         <li class="list-group-item d-flex justify-content-between text-success">
-                            <span><i class="bi bi-check-circle"></i> Less: Offsettable WHT Credits</span>
+                            <span><i class="bi bi-check-circle"></i> Less: Offsettable WHT Credits <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Withholding Tax (WHT) is an advance payment of income tax deducted at the source of your income. You can use these credits to directly reduce your final tax bill."></i></span>
                             <span>- ₦ {{ "{:,.2f}".format(offsettable_total) }}</span>
                         </li>
 
@@ -163,7 +163,7 @@
         <div class="col-md-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">WHT Credit Notes</h5>
+                    <h5 class="mb-0">WHT Credit Notes <i class="bi bi-info-circle text-muted fs-6 ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Record your Withholding Tax credit notes here to offset your total tax liability."></i></h5>
                     <span class="badge bg-secondary">Total: ₦ {{ "{:,.2f}".format(offsettable_total + final_tax_total)
                         }}</span> <!-- ERROR: final_tax_total var name used in route -->
                 </div>
