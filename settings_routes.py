@@ -219,7 +219,8 @@ def expenses():
     # regardless of the filter view. Budget is usually monthly.
     
     from sqlalchemy import func
-    current_month_start = datetime(now.year, now.month, 1)
+    from datetime import timedelta
+    current_month_start = now - timedelta(days=30)
     
     monthly_spend = db.session.query(Expense.category_id, func.sum(Expense.amount))\
         .filter(Expense.user_id == current_user.id, Expense.date >= current_month_start)\
@@ -244,7 +245,7 @@ def expenses():
     expense_breakdown = {}
     total_expenses = 0.0
     for exp in recent_expenses:
-        cat_name = exp.category.name if exp.category else "Uncategorized"
+        cat_name = exp.category.group if exp.category else "Uncategorized"
         expense_breakdown[cat_name] = expense_breakdown.get(cat_name, 0.0) + exp.amount
         total_expenses += exp.amount
         

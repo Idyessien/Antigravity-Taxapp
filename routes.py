@@ -109,7 +109,8 @@ def dashboard():
     import json
     
     now = datetime.utcnow()
-    current_month_start = datetime(now.year, now.month, 1)
+    from datetime import timedelta
+    current_month_start = now - timedelta(days=30) # Use 30-day rolling window to avoid 1st-of-month panic
     
     def get_financials(time_filter=None):
         # Base queries

@@ -64,13 +64,14 @@
                     <div class="row align-items-center">
                         <!-- Interactive Donut -->
                         <div class="col-md-5 mb-4 mb-md-0 position-relative">
-                            <div style="height: 300px; display: flex; justify-content: center;">
+                            <div style="position: relative; height: 280px; width: 100%; max-width: 280px; margin: 0 auto;">
                                 <canvas id="expenseDoughnut"></canvas>
                                 <!-- Center Metric -->
-                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; margin-top: -5px;">
-                                    <div class="text-muted small fw-bold text-uppercase">Total Expenses</div>
-                                    <div class="fs-4 fw-bold text-dark" id="heroTotalExpense">&#8358;0.00</div>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; width: 100%;">
+                                    <div class="text-muted fw-bold text-uppercase" style="font-size: 0.75rem;">Total Expenses</div>
+                                    <div class="fw-bold text-dark" id="heroTotalExpense" style="font-size: 1.3rem;">&#8358;0.00</div>
                                 </div>
+                            </div>
                             </div>
                         </div>
                         
@@ -359,59 +360,7 @@
         const val = document.querySelector('select[name="date_range"]').value;
         toggleCustomDates(val);
         
-        // Render Chart.js Spend Breakdown
-        const ctx = document.getElementById('expenseDoughnut').getContext('2d');
-        const labels = [];
-        const data = [];
-        const bgColors = ['#ef4444', '#f97316', '#eab308', '#10b981', '#14b8a6', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899'];
-        
-        {% for cat in categories %}
-            {% set spent = budget_status[cat.id].spent %}
-            {% if spent > 0 %}
-                labels.push("{{ EMOJI_MAP.get(cat.name, EMOJI_MAP.get(cat.group, '🏷️')) }} {{ cat.name }}");
-                data.push({{ spent }});
-            {% endif %}
-        {% endfor %}
-        
-        if(data.length === 0){
-            labels.push("No Data Yet");
-            data.push(1);
-            bgColors[0] = '#f1f5f9';
-        }
-
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: bgColors,
-                    borderWidth: 0,
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '75%',
-                plugins: {
-                    legend: { position: 'right', labels: { usePointStyle: true, padding: 20, font: { family: "'Segoe UI', sans-serif", size: 12 } } },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) label += ': ';
-                                if (context.parsed !== null) {
-                                    label += new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(context.parsed);
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
         });
-    });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
