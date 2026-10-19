@@ -78,25 +78,45 @@
                         {% if profile_type.value == 'Individual' %}
                         <!-- Individual Waterfall -->
                         <li class="list-group-item d-flex justify-content-between">
-                            <span><strong>Gross Income</strong></span>
+                            <span>
+                                <strong>Gross Income</strong>
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Your total earnings for the year before any tax reliefs or statutory deductions are subtracted."></i>
+                            </span>
                             <span>₦ {{ "{:,.2f}".format(tax_info.gross_income) }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between text-muted">
-                            <span><i class="bi bi-dash-circle"></i> Deductions Total</span>
+                            <span>
+                                <i class="bi bi-dash-circle"></i> Deductions Total
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Statutory contributions (like Pension, NHF, and Rent Relief) that legally reduce the portion of your income subject to tax."></i>
+                            </span>
                             <span class="text-danger">- ₦ {{ "{:,.2f}".format(tax_info.deductions) }}</span>
                         </li>
                         <!-- Deduction Details (Indented) -->
                         <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
-                            <span>Pension (8%)</span>
+                            <span>
+                                Pension (8%)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Mandatory 8% employee contribution toward your Retirement Savings Account (RSA), which is 100% tax-deductible."></i>
+                            </span>
                             <span>{{ "{:,.2f}".format(tax_info.breakdown.pension) }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
-                            <span>NHF (2.5%)</span>
+                            <span>
+                                NHF (2.5%)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="National Housing Fund (NHF): A 2.5% contribution that qualifies you for low-interest federal mortgage loans and is exempt from income tax."></i>
+                            </span>
                             <span>{{ "{:,.2f}".format(tax_info.breakdown.nhf) }}</span>
                         </li>
                         {% if tax_info.breakdown.rent_relief > 0 %}
                         <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
-                            <span>Rent Relief (Max 500k)</span>
+                            <span>
+                                Rent Relief (Max 500k)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Under the Nigerian Tax Reform Act, individuals can deduct 20% of their annual rent (capped at ₦500,000) from their taxable income."></i>
+                            </span>
                             <span>{{ "{:,.2f}".format(tax_info.breakdown.rent_relief) }}</span>
                         </li>
                         {% endif %}
@@ -107,34 +127,62 @@
                         </li>
                         {% endif %}
                         <li class="list-group-item d-flex justify-content-between bg-light">
-                            <span><strong>Taxable Income</strong></span>
+                            <span>
+                                <strong>Taxable Income</strong>
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="The remaining portion of your Gross Income after subtracting all eligible deductions. Your tax bands are applied to this amount."></i>
+                            </span>
                             <strong>₦ {{ "{:,.2f}".format(tax_info.taxable_income) }}</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
-                            <span><i class="bi bi-calculator"></i> Tax Calculated (Bands)</span>
+                            <span>
+                                <i class="bi bi-calculator"></i> Tax Calculated (Bands)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Progressive tax rates applied step-by-step: 0% on your first ₦800k, 15% on the next ₦2.2M, 18% on the next ₦9M, up to 25% for income above ₦50M."></i>
+                            </span>
                             <span>+ ₦ {{ "{:,.2f}".format(tax_info.total_tax) }}</span>
                         </li>
                         {% else %}
                         <!-- Corporate Waterfall -->
                         <li class="list-group-item d-flex justify-content-between">
-                            <span><strong>Total Revenue</strong></span>
+                            <span>
+                                <strong>Total Revenue</strong>
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Total gross turnover earned by the business from sales and services before deducting operating expenses."></i>
+                            </span>
                             <span>₦ {{ "{:,.2f}".format(tax_info.revenue) }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between text-muted">
-                            <span><i class="bi bi-dash-circle"></i> Expenses</span>
+                            <span>
+                                <i class="bi bi-dash-circle"></i> Deductible Business Expenses
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Allowable day-to-day operating costs (WREN: Wholly, Reasonably, Exclusively, and Necessarily incurred for the business). Capital investments like buying stocks are excluded."></i>
+                            </span>
                             <span class="text-danger">- ₦ {{ "{:,.2f}".format(tax_info.revenue - tax_info.profit)
                                 }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between bg-light">
-                            <span><strong>Assessable Profit</strong></span>
+                            <span>
+                                <strong>Assessable Profit</strong>
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Your net business profit (Total Revenue minus allowable Operating Expenses) on which Company Income Tax and Development Levy are calculated."></i>
+                            </span>
                             <strong>₦ {{ "{:,.2f}".format(tax_info.profit) }}</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
-                            <span><i class="bi bi-building"></i> Company Income Tax (CIT)</span>
+                            <span>
+                                <i class="bi bi-building"></i> Company Income Tax (CIT)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Company Income Tax (CIT): Corporate tax on Assessable Profit. 0% for Small Businesses (turnover up to ₦25M), 20% for Medium Companies (₦25M–₦100M), and 30% for Large Companies (above ₦100M)."></i>
+                            </span>
                             <span>₦ {{ "{:,.2f}".format(tax_info.cit_tax) }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
-                            <span><i class="bi bi-mortarboard"></i> Development Levy (4%)</span>
+                            <span>
+                                <i class="bi bi-mortarboard"></i> Development Levy (4%)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="A consolidated 4% statutory levy on Assessable Profit for Medium and Large companies (replacing separate TETFund, NITDA, and NASENI levies). Small businesses are exempt."></i>
+                            </span>
                             <span>₦ {{ "{:,.2f}".format(tax_info.dev_levy) }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between fw-bold">
@@ -145,7 +193,7 @@
 
                         <!-- WHT Credits Section -->
                         <li class="list-group-item d-flex justify-content-between text-success">
-                            <span><i class="bi bi-check-circle"></i> Less: Offsettable WHT Credits</span>
+                            <span><i class="bi bi-check-circle"></i> Less: Offsettable WHT Credits <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Withholding Tax (WHT) is an advance payment of income tax deducted at the source of your income. You can use these credits to directly reduce your final tax bill."></i></span>
                             <span>- ₦ {{ "{:,.2f}".format(offsettable_total) }}</span>
                         </li>
 
@@ -163,7 +211,7 @@
         <div class="col-md-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">WHT Credit Notes</h5>
+                    <h5 class="mb-0">WHT Credit Notes <i class="bi bi-info-circle text-muted fs-6 ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Record your Withholding Tax credit notes here to offset your total tax liability."></i></h5>
                     <span class="badge bg-secondary">Total: ₦ {{ "{:,.2f}".format(offsettable_total + final_tax_total)
                         }}</span> <!-- ERROR: final_tax_total var name used in route -->
                 </div>

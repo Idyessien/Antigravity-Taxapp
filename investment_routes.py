@@ -24,9 +24,14 @@ def wealth_dashboard():
 @investment_bp.route('/wealth/goal/add', methods=['POST'])
 @login_required
 def add_goal():
+    def parse_num(val):
+        if not val:
+            return 0.0
+        return float(str(val).replace(',', '').strip() or 0.0)
+
     name = request.form.get('name')
-    target = float(request.form.get('target_amount') or 0)
-    current = float(request.form.get('current_amount') or 0)
+    target = parse_num(request.form.get('target_amount'))
+    current = parse_num(request.form.get('current_amount'))
     deadline_str = request.form.get('deadline')
     
     deadline = None
@@ -70,6 +75,11 @@ def add_goal():
 @investment_bp.route('/wealth/goal/edit/<int:id>', methods=['POST'])
 @login_required
 def edit_goal(id):
+    def parse_num(val):
+        if not val:
+            return 0.0
+        return float(str(val).replace(',', '').strip() or 0.0)
+
     goal = SavingsGoal.query.get_or_404(id)
     if goal.user_id != current_user.id: return redirect(url_for('investment.wealth_dashboard'))
     
@@ -77,7 +87,7 @@ def edit_goal(id):
     # If form has 'add_amount', validation:
     add_amt = request.form.get('add_amount')
     if add_amt:
-        amt_val = float(add_amt)
+        amt_val = parse_num(add_amt)
         goal.current_amount += amt_val
         
         # Auto-Expense Logic for Top Up
@@ -100,9 +110,10 @@ def edit_goal(id):
     else:
         # Full Edit
         goal.name = request.form.get('name') or goal.name
-        goal.target_amount = float(request.form.get('target_amount') or goal.target_amount)
-        if request.form.get('current_amount'):
-            goal.current_amount = float(request.form.get('current_amount'))
+        if request.form.get('target_amount'):
+            goal.target_amount = parse_num(request.form.get('target_amount'))
+        if request.form.get('current_amount') is not None and request.form.get('current_amount') != '':
+            goal.current_amount = parse_num(request.form.get('current_amount'))
             
         deadline_str = request.form.get('deadline')
         if deadline_str:
@@ -129,14 +140,23 @@ def delete_goal(id):
 @investment_bp.route('/wealth/add', methods=['POST'])
 @login_required
 def add_investment():
+    def parse_num(val):
+        if not val:
+            return 0.0
+        return float(str(val).replace(',', '').strip() or 0.0)
+
     # Simple add logic for demo
     name = request.form.get('name')
     asset_type = request.form.get('asset_type')
     sub_type = request.form.get('sub_type')
-    total_value = float(request.form.get('total_value') or 0)
-    annual_gain = float(request.form.get('annual_gain') or 0)
-    disposal_proceeds = float(request.form.get('disposal_proceeds') or 0)
-    chargeable_gains = float(request.form.get('chargeable_gains') or 0)
+    total_value = parse_num(request.form.get('total_value'))
+    annual_gain = parse_num(request.form.get('annual_gain'))
+    disposal_proceeds = parse_num(request.form.get('disposal_proceeds'))
+    chargeable_gains = parse_num(request.form.get('chargeable_gains'))
+    
+    # Only Bond and Cash have fixed annual coupon/interest gain
+    if asset_type in [AssetType.STOCK.value, AssetType.CRYPTO.value]:
+        annual_gain = 0.0
     
     from models import FundingSource, Expense, Category, CategoryTarget
     from datetime import datetime
@@ -189,6 +209,11 @@ def add_investment():
 @investment_bp.route('/wealth/edit/<int:id>', methods=['POST'])
 @login_required
 def edit_investment(id):
+    def parse_num(val):
+        if not val:
+            return 0.0
+        return float(str(val).replace(',', '').strip() or 0.0)
+
     inv = Investment.query.get_or_404(id)
     if inv.user_id != current_user.id:
         flash('Unauthorized access.')
@@ -197,10 +222,13 @@ def edit_investment(id):
     inv.name = request.form.get('name')
     inv.asset_type = AssetType(request.form.get('asset_type'))
     inv.sub_type = InvestmentSubType(request.form.get('sub_type'))
-    inv.total_value = float(request.form.get('total_value') or 0)
-    inv.annual_gain = float(request.form.get('annual_gain') or 0)
-    inv.disposal_proceeds = float(request.form.get('disposal_proceeds') or 0)
-    inv.chargeable_gains = float(request.form.get('chargeable_gains') or 0)
+    inv.total_value = parse_num(request.form.get('total_value'))
+    inv.annual_gain = parse_num(request.form.get('annual_gain'))
+    inv.disposal_proceeds = parse_num(request.form.get('disposal_proceeds'))
+    inv.chargeable_gains = parse_num(request.form.get('chargeable_gains'))
+    
+    if inv.asset_type in [AssetType.STOCK, AssetType.CRYPTO]:
+        inv.annual_gain = 0.0
     
     db.session.commit()
     flash('Investment updated successfully!')
@@ -222,16 +250,21 @@ def delete_investment(id):
 @investment_bp.route('/optimizer', methods=['GET', 'POST'])
 @login_required
 def optimizer():
-    # Prompt 10: TEY Calculator
-    # Access Control: "Pro Feature" - check is_pro?
-    # For now, let's just show it but maybe add a badge.
-    
     tey_result = None
+    yield_val = None
+    tax_bracket_pct = None
     if request.method == 'POST':
-        yield_val = float(request.form.get('yield') or 0)
-        tax_bracket = float(request.form.get('tax_bracket') or 0) / 100
+        yield_str = str(request.form.get('yield') or '0').replace(',', '').strip()
+        tax_str = str(request.form.get('tax_bracket') or '0').replace(',', '').strip()
+        yield_val = float(yield_str or 0)
+        tax_bracket_pct = float(tax_str or 0)
+        tax_bracket = tax_bracket_pct / 100.0
         
         real_tey = calculate_tey(yield_val, tax_bracket)
         tey_result = round(real_tey, 2)
         
-    return render_template('optimizer.html', tey_result=tey_result)
+    return render_template('optimizer.html', 
+                           user=current_user,
+                           tey_result=tey_result,
+                           yield_val=yield_val,
+                           tax_bracket_pct=tax_bracket_pct)

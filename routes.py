@@ -189,9 +189,42 @@ def dashboard():
             }
         }
         
+    # Monthly Jan-Dec Trend for Yearly View (Income vs Expenditure)
+    yearly_inc_by_month = dict(
+        db.session.query(extract('month', Income.date), func.sum(Income.amount))
+        .filter(Income.user_id == current_user.id, extract('year', Income.date) == now.year)
+        .group_by(extract('month', Income.date))
+        .all()
+    )
+    yearly_exp_by_month = dict(
+        db.session.query(extract('month', Expense.date), func.sum(Expense.amount))
+        .join(Category)
+        .filter(
+            Expense.user_id == current_user.id,
+            extract('year', Expense.date) == now.year,
+            Category.name != "Investments & Savings"
+        )
+        .group_by(extract('month', Expense.date))
+        .all()
+    )
+
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    yearly_trend = {
+        "labels": month_names,
+        "income": [float(yearly_inc_by_month.get(m, 0.0) or 0.0) for m in range(1, 13)],
+        "expenditure": [float(yearly_exp_by_month.get(m, 0.0) or 0.0) for m in range(1, 13)]
+    }
+    yearly_trend["net"] = [
+        round(yearly_trend["income"][i] - yearly_trend["expenditure"][i], 2)
+        for i in range(12)
+    ]
+
+    yearly_data = get_financials("yearly")
+    yearly_data["monthly_trend"] = yearly_trend
+
     dashboard_data = {
         "monthly": get_financials("monthly"),
-        "yearly": get_financials("yearly"),
+        "yearly": yearly_data,
         "all_time": get_financials("all_time")
     }
 
