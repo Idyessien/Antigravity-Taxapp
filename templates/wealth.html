@@ -159,20 +159,27 @@
                     <div class="collapse mb-4" id="addAssetForm">
                         <div class="card bg-light border-0 p-3">
                             <form method="POST" action="{{ url_for('investment.add_investment') }}">
-                                <h6 class="mb-3 text-primary">New Investment Entry</h6>
-                                <div class="row g-3">
+                                <h6 class="mb-3 text-primary fw-bold">New Investment Entry</h6>
+                                <div class="row g-3 align-items-end">
                                     <div class="col-md-3">
-                                        <input type="text" name="name" class="form-control" placeholder="Asset Name"
+                                        <label class="form-label small fw-bold mb-1">Asset Name</label>
+                                        <input type="text" name="name" class="form-control" placeholder="e.g. Dangote Cement, FGN Bond"
                                             required>
                                     </div>
                                     <div class="col-md-2">
-                                        <select name="asset_type" class="form-select">
+                                        <label class="form-label small fw-bold mb-1">Asset Type</label>
+                                        <select name="asset_type" id="addAssetType" class="form-select" onchange="toggleAnnualGain('add')">
                                             {% for a in asset_types %}
                                             <option value="{{ a.value }}">{{ a.value }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
                                     <div class="col-md-2">
+                                        <label class="form-label small fw-bold mb-1">
+                                            Issuer Category
+                                            <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                               title="Government securities (like FGN Bonds & T-Bills) are generally tax-exempt, while Corporate securities are subject to standard taxes."></i>
+                                        </label>
                                         <select name="sub_type" class="form-select">
                                             {% for s in sub_types %}
                                             <option value="{{ s.value }}">{{ s.value }}</option>
@@ -180,21 +187,32 @@
                                         </select>
                                     </div>
                                     <div class="col-md-3">
+                                        <label class="form-label small fw-bold mb-1">
+                                            Funding Source
+                                            <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                               title="'Brought Forward' means you already owned this asset. 'Purchased from Income' deducts the purchase amount from your current cash balance."></i>
+                                        </label>
                                         <select name="funding_source" class="form-select text-primary fw-bold">
                                             <option value="Brought Forward (Existing)">Brought Forward</option>
                                             <option value="Purchased from Income">Purchased from Income</option>
                                         </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="number" step="0.01" name="total_value" class="form-control"
-                                            placeholder="Value (₦)" required>
+                                        <label class="form-label small fw-bold mb-1">Current Value (₦)</label>
+                                        <input type="text" name="total_value" class="form-control currency-input"
+                                            placeholder="e.g. 100,000" required>
+                                    </div>
+                                    <div class="col-md-3" id="addAnnualGainWrapper">
+                                        <label class="form-label small fw-bold mb-1">
+                                            Annual Coupon / Interest (₦)
+                                            <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                               title="Fixed annual interest or coupon payout (applicable to Bonds and Cash savings). Stocks and Crypto do not have fixed annual coupons."></i>
+                                        </label>
+                                        <input type="text" name="annual_gain" id="addAnnualGain" class="form-control currency-input"
+                                            placeholder="e.g. 15,000 (Optional)">
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="number" step="0.01" name="annual_gain" class="form-control"
-                                            placeholder="Annual Gain (₦)">
-                                    </div>
-                                    <div class="col-md-1">
-                                        <button type="submit" class="btn btn-primary w-100">Add</button>
+                                        <button type="submit" class="btn btn-primary w-100">Add Asset</button>
                                     </div>
                                 </div>
                             </form>
@@ -209,7 +227,11 @@
                                     <th>Asset</th>
                                     <th>Type</th>
                                     <th>Current Value</th>
-                                    <th>Annual Gain</th>
+                                    <th>
+                                        Annual Coupon / Interest
+                                        <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                           title="Fixed annual interest earned on Bonds or Cash. Market assets like Stocks and Crypto only realize taxable gains when sold."></i>
+                                    </th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -220,7 +242,13 @@
                                     <td><span class="badge bg-secondary">{{ inv.asset_type.value }}</span> <small
                                             class="text-muted d-block">{{ inv.sub_type.value }}</small></td>
                                     <td>₦{{ "{:,.2f}".format(inv.total_value) }}</td>
-                                    <td class="text-success">+₦{{ "{:,.2f}".format(inv.annual_gain) }}</td>
+                                    <td>
+                                        {% if inv.asset_type.value in ['Stock', 'Crypto'] %}
+                                            <span class="text-muted small">N/A (Market Asset)</span>
+                                        {% else %}
+                                            <span class="text-success">+₦{{ "{:,.2f}".format(inv.annual_gain) }}</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <div class="btn-group">
                                             <button class="btn btn-sm btn-link text-primary"
@@ -271,11 +299,11 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Target Amount (₦)</label>
-                                <input type="number" step="0.01" name="target_amount" class="form-control" required>
+                                <input type="text" name="target_amount" class="form-control currency-input" placeholder="e.g. 500,000" required>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Current Savings (₦)</label>
-                                <input type="number" step="0.01" name="current_amount" class="form-control" value="0">
+                                <input type="text" name="current_amount" class="form-control currency-input" value="0">
                             </div>
                         </div>
                         <div class="mb-3">
@@ -307,7 +335,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Amount to Add (₦)</label>
-                                <input type="number" step="0.01" name="add_amount" class="form-control form-control-lg"
+                                <input type="text" name="add_amount" class="form-control form-control-lg currency-input"
                                     placeholder="0.00">
                             </div>
                         </div>
@@ -321,13 +349,13 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Target (₦)</label>
-                                    <input type="number" step="0.01" name="target_amount" id="editGoalTarget"
-                                        class="form-control">
+                                    <input type="text" name="target_amount" id="editGoalTarget"
+                                        class="form-control currency-input">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Current (₦)</label>
-                                    <input type="number" step="0.01" name="current_amount" id="editGoalCurrent"
-                                        class="form-control">
+                                    <input type="text" name="current_amount" id="editGoalCurrent"
+                                        class="form-control currency-input">
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -343,38 +371,88 @@
         </div>
     </div>
 
-    <!-- Edit Investment Modal (Basic implementation kept for functionality) -->
+    <!-- Edit Investment Modal -->
     <div class="modal fade" id="editInvestmentModal" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content">
+            <div class="modal-content border-0 shadow">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Asset</h5>
+                    <h5 class="modal-title fw-bold">Edit Asset</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <form id="editInvestmentForm" method="POST">
-                        <input type="text" name="name" id="editName" class="form-control mb-3" placeholder="Name"
-                            required>
-                        <div class="d-flex gap-2 mb-3">
-                            <select name="asset_type" id="editAssetType" class="form-control">
-                                {% for a in asset_types %}<option value="{{ a.value }}">{{ a.value }}</option>{% endfor
-                                %}
-                            </select>
-                            <select name="sub_type" id="editSubType" class="form-control">
-                                {% for s in sub_types %}<option value="{{ s.value }}">{{ s.value }}</option>{% endfor %}
-                            </select>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold mb-1">Asset Name</label>
+                            <input type="text" name="name" id="editName" class="form-control" placeholder="Asset Name"
+                                required>
                         </div>
-                        <input type="number" step="0.01" name="total_value" id="editValue" class="form-control mb-3"
-                            placeholder="Value">
-                        <input type="number" step="0.01" name="annual_gain" id="editGain" class="form-control mb-3"
-                            placeholder="Gain">
-                        <div class="row">
-                            <div class="col-6"><input type="number" step="0.01" name="disposal_proceeds"
-                                    id="editProceeds" class="form-control" placeholder="Proceeds"></div>
-                            <div class="col-6"><input type="number" step="0.01" name="chargeable_gains"
-                                    id="editChargeable" class="form-control" placeholder="Capital Gain"></div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold mb-1">Asset Type</label>
+                                <select name="asset_type" id="editAssetType" class="form-select" onchange="toggleAnnualGain('edit')">
+                                    {% for a in asset_types %}<option value="{{ a.value }}">{{ a.value }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold mb-1">
+                                    Issuer Category
+                                    <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                       title="Government assets (FGN Bonds, T-Bills) are generally tax-free, whereas Corporate assets are taxable."></i>
+                                </label>
+                                <select name="sub_type" id="editSubType" class="form-select">
+                                    {% for s in sub_types %}<option value="{{ s.value }}">{{ s.value }}</option>{% endfor %}
+                                </select>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100 mt-3">Update Asset</button>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold mb-1">Current Portfolio Value (₦)</label>
+                            <input type="text" name="total_value" id="editValue" class="form-control currency-input"
+                                placeholder="e.g. 100,000">
+                        </div>
+                        <div class="mb-3" id="editAnnualGainWrapper">
+                            <label class="form-label small fw-bold mb-1">
+                                Annual Coupon / Interest (₦)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                   title="Fixed yearly interest earned on Bonds or Cash savings. Automatically hidden for Stocks and Crypto since they do not pay fixed annual coupons."></i>
+                            </label>
+                            <input type="text" name="annual_gain" id="editGain" class="form-control currency-input"
+                                placeholder="0.00">
+                        </div>
+
+                        <!-- Collapsible Disposal / Capital Gains Section -->
+                        <div class="form-check form-switch mb-2 mt-3">
+                            <input class="form-check-input" type="checkbox" id="toggleSoldAsset" onchange="toggleDisposalSection()">
+                            <label class="form-check-label small fw-bold" for="toggleSoldAsset">
+                                Have you sold (disposed of) this asset?
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                   title="Only fill this if you sold the asset during the tax year. Used to calculate Capital Gains Tax (CGT) on your realized profit."></i>
+                            </label>
+                        </div>
+
+                        <div id="disposalFieldsWrapper" class="border rounded p-3 mb-3 d-none">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold mb-1">
+                                        Total Sale Proceeds (₦)
+                                        <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                           title="Disposal Proceeds: The total cash amount you received when you sold this asset."></i>
+                                    </label>
+                                    <input type="text" name="disposal_proceeds" id="editProceeds"
+                                        class="form-control currency-input" placeholder="0.00">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold mb-1">
+                                        Realized Profit / Gain (₦)
+                                        <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                           title="Chargeable Gain: The actual profit you made from the sale (Sale Price minus Original Purchase Cost). This is the portion subject to Capital Gains Tax."></i>
+                                    </label>
+                                    <input type="text" name="chargeable_gains" id="editChargeable"
+                                        class="form-control currency-input" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-2">Update Asset</button>
                     </form>
                 </div>
             </div>
@@ -383,20 +461,87 @@
 
 
     <script>
-        // Set min date to today for new goal
+        function formatNumberWithCommas(val) {
+            if (val === null || val === undefined || val === '') return '';
+            let clean = String(val).replace(/,/g, '').replace(/[^0-9.]/g, '');
+            if (!clean) return '';
+            let parts = clean.split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            if (parts.length > 1 && parts[1] === '0') {
+                return parts[0];
+            }
+            return parts.length > 1 ? parts[0] + '.' + parts[1].slice(0, 2) : parts[0];
+        }
+
+        function toggleAnnualGain(mode) {
+            const selectEl = document.getElementById(mode === 'add' ? 'addAssetType' : 'editAssetType');
+            const wrapperEl = document.getElementById(mode === 'add' ? 'addAnnualGainWrapper' : 'editAnnualGainWrapper');
+            const inputEl = document.getElementById(mode === 'add' ? 'addAnnualGain' : 'editGain');
+            if (!selectEl || !wrapperEl) return;
+
+            const val = selectEl.value;
+            if (val === 'Stock' || val === 'Crypto') {
+                wrapperEl.classList.add('d-none');
+                if (inputEl) inputEl.value = '0';
+            } else {
+                wrapperEl.classList.remove('d-none');
+            }
+        }
+
+        function toggleDisposalSection() {
+            const chk = document.getElementById('toggleSoldAsset');
+            const wrapper = document.getElementById('disposalFieldsWrapper');
+            if (chk && wrapper) {
+                if (chk.checked) {
+                    wrapper.classList.remove('d-none');
+                } else {
+                    wrapper.classList.add('d-none');
+                    document.getElementById('editProceeds').value = '0';
+                    document.getElementById('editChargeable').value = '0';
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
-            // Removed min date restriction to fix selection issues
+            toggleAnnualGain('add');
+
+            document.querySelectorAll('.currency-input').forEach(input => {
+                input.addEventListener('input', function (e) {
+                    let raw = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '');
+                    if (!raw) {
+                        e.target.value = '';
+                        return;
+                    }
+                    const parts = raw.split('.');
+                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    e.target.value = parts.length > 1 ? parts[0] + '.' + parts[1].slice(0, 2) : parts[0];
+                });
+            });
         });
 
-        // Existing Scripts for Modals
         function editInvestment(id, name, type, subType, value, gain, proceeds, chargeable) {
             document.getElementById('editName').value = name;
             document.getElementById('editAssetType').value = type;
             document.getElementById('editSubType').value = subType;
-            document.getElementById('editValue').value = value;
-            document.getElementById('editGain').value = gain;
-            document.getElementById('editProceeds').value = proceeds;
-            document.getElementById('editChargeable').value = chargeable;
+            document.getElementById('editValue').value = formatNumberWithCommas(value);
+            document.getElementById('editGain').value = formatNumberWithCommas(gain);
+            document.getElementById('editProceeds').value = formatNumberWithCommas(proceeds);
+            document.getElementById('editChargeable').value = formatNumberWithCommas(chargeable);
+
+            toggleAnnualGain('edit');
+
+            const hasSoldData = (parseFloat(proceeds) > 0 || parseFloat(chargeable) > 0);
+            const soldCheckbox = document.getElementById('toggleSoldAsset');
+            if (soldCheckbox) {
+                soldCheckbox.checked = hasSoldData;
+                const wrapper = document.getElementById('disposalFieldsWrapper');
+                if (hasSoldData) {
+                    wrapper.classList.remove('d-none');
+                } else {
+                    wrapper.classList.add('d-none');
+                }
+            }
+
             document.getElementById('editInvestmentForm').action = "/wealth/edit/" + id;
             new bootstrap.Modal(document.getElementById('editInvestmentModal')).show();
         }
@@ -415,8 +560,8 @@
             document.getElementById('topUpFields').classList.add('d-none');
             document.getElementById('editGoalDetails').classList.remove('d-none');
             document.getElementById('editGoalName').value = name;
-            document.getElementById('editGoalTarget').value = target;
-            document.getElementById('editGoalCurrent').value = current;
+            document.getElementById('editGoalTarget').value = formatNumberWithCommas(target);
+            document.getElementById('editGoalCurrent').value = formatNumberWithCommas(current);
             if (deadline && deadline != 'None') {
                 document.getElementById('editGoalDeadline').value = deadline.split(' ')[0];
             }

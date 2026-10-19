@@ -2,32 +2,133 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Investment Tax Optimizer (Pro)</h2>
-    <p>Calculate your Tax Equivalent Yield (TEY) to compare tax-free assets (like FGN Bonds) with taxable ones.</p>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">
+                Investment Return Comparison (Tax Optimizer)
+                <i class="bi bi-info-circle text-muted fs-5 ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="Compares returns from tax-free government investments (like FGN Bonds) against regular bank or corporate investments where tax is deducted from your interest."></i>
+            </h2>
+            <p class="text-muted mb-0">
+                Find out how much interest a regular taxable investment (like a Bank Fixed Deposit or Commercial Paper) must pay you to match a <strong>100% tax-free</strong> FGN Bond or Treasury Bill.
+            </p>
+        </div>
+        <a href="{{ url_for('investment.wealth_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to Wealth
+        </a>
+    </div>
 
-    <div class="card col-md-6 mx-auto">
-        <div class="card-body">
-            <form method="POST">
-                <div class="mb-3">
-                    <label>Tax Free Yield (%)</label>
-                    <input type="number" step="0.01" name="yield" class="form-control" placeholder="e.g. 12.5" required>
-                </div>
-                <div class="mb-3">
-                    <label>Your Marginal Tax Bracket (%)</label>
-                    <input type="number" step="0.01" name="tax_bracket" class="form-control" placeholder="e.g. 25"
-                        required>
-                </div>
-                <button type="submit" class="btn btn-success w-100">Calculate TEY</button>
-            </form>
-
-            {% if tey_result %}
-            <div class="alert alert-success mt-3 text-center">
-                <h4>Tax Equivalent Yield: {{ "{:,.2f}".format(tey_result) }}%</h4>
-                <p>A taxable investment would need to pay <strong>{{ "{:,.2f}".format(tey_result) }}%</strong> to match
-                    this tax-free
-                    return.</p>
+    <!-- Relatable Nigerian Context Banner -->
+    <div class="alert alert-info border-0 shadow-sm mb-4">
+        <div class="d-flex">
+            <i class="bi bi-lightbulb-fill fs-4 me-3 text-primary"></i>
+            <div>
+                <strong>How this works in Nigeria:</strong><br>
+                When you earn interest on a <strong>Federal Government (FGN) Bond or Treasury Bill</strong>, you pay <strong>0% tax</strong>—you keep every kobo. However, when you earn interest on a <strong>Bank Fixed Deposit, Commercial Paper, or Savings App</strong>, the bank or tax authority deducts <strong>Withholding Tax (WHT) <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Withholding Tax (WHT): A 10% tax automatically deducted by banks and financial institutions from your interest or dividend payout before it hits your account."></i></strong> or Income Tax from your profit. Use this tool to see which deal actually puts more money in your pocket.
             </div>
-            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">Compare Investment Rates</h5>
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                1. Interest Rate on Tax-Free Investment (% per year)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                   title="The annual interest rate (coupon/yield) advertised on a tax-exempt asset such as an FGN Bond, Sukuk, or Treasury Bill."></i>
+                            </label>
+                            <input type="number" step="0.01" name="yield" class="form-control"
+                                   placeholder="e.g. 15.0" value="{{ yield_val if yield_val is not none else '' }}" required>
+                            <div class="form-text">Example: FGN Savings Bond, Sukuk, or Treasury Bills.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                2. Tax Rate on the Competing Taxable Investment (%)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                   title="The percentage of tax that will be deducted from the interest or profit of the alternative taxable investment."></i>
+                            </label>
+
+                            <!-- Profile-Specific Quick Select Helper -->
+                            <select class="form-select mb-2" id="presetTaxRate" onchange="if(this.value) document.getElementById('taxBracketInput').value = this.value;">
+                                <option value="">-- Choose a common Nigerian tax rate for your profile --</option>
+                                {% if user.profile_type.value == 'Individual' %}
+                                    <option value="10" {% if tax_bracket_pct == 10 %}selected{% endif %}>10% — Standard Bank Withholding Tax (Fixed Deposits, Savings Apps, Dividends)</option>
+                                    <option value="15" {% if tax_bracket_pct == 15 %}selected{% endif %}>15% — Individual Income Tax (Income up to ₦3M)</option>
+                                    <option value="18" {% if tax_bracket_pct == 18 %}selected{% endif %}>18% — Individual Income Tax (Income up to ₦12M)</option>
+                                    <option value="21" {% if tax_bracket_pct == 21 %}selected{% endif %}>21% — Individual Income Tax (Income up to ₦25M)</option>
+                                    <option value="23" {% if tax_bracket_pct == 23 %}selected{% endif %}>23% — Individual Income Tax (Income up to ₦50M)</option>
+                                    <option value="25" {% if tax_bracket_pct == 25 %}selected{% endif %}>25% — Individual Top Tax Bracket (Income above ₦50M)</option>
+                                {% elif user.profile_type.value == 'Small Business' %}
+                                    <option value="10" {% if tax_bracket_pct == 10 %}selected{% endif %}>10% — Standard Withholding Tax (WHT) on Interest / Fixed Deposits</option>
+                                    <option value="0" {% if tax_bracket_pct == 0 %}selected{% endif %}>0% — Small Company CIT Exemption (Turnover under ₦25M)</option>
+                                    <option value="20" {% if tax_bracket_pct == 20 %}selected{% endif %}>20% — Medium Company Income Tax (Turnover ₦25M – ₦100M)</option>
+                                {% else %}
+                                    <option value="10" {% if tax_bracket_pct == 10 %}selected{% endif %}>10% — Standard Withholding Tax (WHT) at Source on Interest</option>
+                                    <option value="30" {% if tax_bracket_pct == 30 %}selected{% endif %}>30% — Large Company Income Tax (CIT) Rate (Turnover above ₦100M)</option>
+                                {% endif %}
+                            </select>
+
+                            <div class="input-group">
+                                <input type="number" step="0.01" name="tax_bracket" id="taxBracketInput" class="form-control"
+                                       placeholder="Or type custom tax % (e.g. 10)" value="{{ tax_bracket_pct if tax_bracket_pct is not none else '10' }}" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text">
+                                Showing tax presets tailored to your <strong>{{ user.profile_type.value }}</strong> account.
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100 py-2 fw-bold">
+                            <i class="bi bi-calculator me-1"></i> Compare Returns
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm border-0 h-100 bg-light">
+                <div class="card-body p-4 d-flex flex-column justify-content-center">
+                    {% if tey_result is not none %}
+                        <div class="text-center">
+                            <span class="badge bg-success mb-2 px-3 py-2">Comparison Result</span>
+                            <h6 class="text-muted text-uppercase mb-1">
+                                Required Taxable Interest Rate (TEY)
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                                   title="Tax Equivalent Yield (TEY): The pre-tax interest rate a taxable investment must pay to equal the return of a tax-free investment."></i>
+                            </h6>
+                            <h1 class="display-4 fw-bold text-success mb-3">{{ "{:,.2f}".format(tey_result) }}%</h1>
+                            <p class="lead mb-3">
+                                To match a <strong>{{ "{:,.2f}".format(yield_val) }}%</strong> tax-free FGN Bond after a <strong>{{ "{:,.1f}".format(tax_bracket_pct) }}%</strong> tax deduction, a Bank Fixed Deposit or Corporate Investment must pay you at least <strong>{{ "{:,.2f}".format(tey_result) }}%</strong> interest!
+                            </p>
+                            <div class="card border-0 shadow-sm text-start p-3 bg-white">
+                                <div class="small fw-bold text-muted mb-2">Example on ₦1,000,000 invested for 1 year:</div>
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Tax-Free Asset at {{ "{:,.2f}".format(yield_val) }}% (You keep 100%):</span>
+                                    <strong class="text-success">+₦{{ "{:,.0f}".format(10000 * yield_val) }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between small">
+                                    <span>Taxable Asset at {{ "{:,.2f}".format(yield_val) }}% (After {{ "{:,.1f}".format(tax_bracket_pct) }}% tax):</span>
+                                    <strong class="text-danger">+₦{{ "{:,.0f}".format(10000 * yield_val * (1 - tax_bracket_pct / 100)) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-bar-chart-steps display-3 opacity-50 mb-3 d-block"></i>
+                            <h5 class="fw-bold">See Your True Take-Home Return</h5>
+                            <p class="small mb-0">
+                                Enter a tax-free interest rate on the left and click <strong>Compare Returns</strong> to see how much a taxable investment must pay you to match it in Naira terms.
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -189,6 +189,31 @@
                 </div>
             </div>
         </div>
+
+        <!-- Yearly Only: INCOME - EXPENDITURE Line Chart -->
+        <div class="col-12 mb-4 d-none" id="yearlyTrendRow">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="card-title text-dark mb-0 fw-bold text-uppercase">
+                                Income - Expenditure (Yearly Trend)
+                                <i class="bi bi-info-circle text-muted ms-1 fs-6" data-bs-toggle="tooltip"
+                                   title="Shows your monthly Income (green) vs. Expenditure (red) across the year. The badges on each month show your net surplus (green) or deficit (amber)."></i>
+                            </h5>
+                            <small class="text-muted">Monthly surplus / deficit breakdown across the current year</small>
+                        </div>
+                        <div class="d-flex gap-2 small">
+                            <span class="badge" style="background-color: #bbf7d0; color: #065f46;">+ Net Surplus</span>
+                            <span class="badge" style="background-color: #fbbf24; color: #1f2937;">- Net Deficit</span>
+                        </div>
+                    </div>
+                    <div style="height: 340px; position: relative;">
+                        <canvas id="yearlyTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -202,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     let compChartInstance = null;
+    let yearlyTrendChartInstance = null;
     
     function renderBudgetBars(data) {
         const container = document.getElementById('budgetBarsContainer');
@@ -287,11 +313,149 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    function renderYearlyTrendChart(trendData) {
+        const canvas = document.getElementById('yearlyTrendChart');
+        if (!canvas || !trendData) return;
+        const ctx = canvas.getContext('2d');
+
+        if (yearlyTrendChartInstance) {
+            yearlyTrendChartInstance.destroy();
+        }
+
+        // Custom plugin to draw the Net (Income - Expenditure) badge callouts like the reference image
+        const netCalloutPlugin = {
+            id: 'netCalloutPlugin',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                const metaInc = chart.getDatasetMeta(0);
+                const metaExp = chart.getDatasetMeta(1);
+                ctx.save();
+                ctx.font = 'bold 11px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                trendData.net.forEach((netVal, idx) => {
+                    const incVal = trendData.income[idx] || 0;
+                    const expVal = trendData.expenditure[idx] || 0;
+                    if (incVal === 0 && expVal === 0) return;
+
+                    const ptInc = metaInc.data[idx];
+                    const ptExp = metaExp.data[idx];
+                    if (!ptInc || !ptExp) return;
+
+                    const x = ptInc.x;
+                    // Position badge slightly above the higher point of the two lines
+                    const topY = Math.min(ptInc.y, ptExp.y) - 22;
+                    const y = Math.max(20, topY);
+
+                    const formatted = (netVal > 0 ? '+' : '') + netVal.toLocaleString('en-NG', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+
+                    const paddingX = 6;
+                    const boxHeight = 20;
+                    const textWidth = ctx.measureText(formatted).width;
+                    const boxWidth = textWidth + paddingX * 2;
+
+                    // Light green for surplus (>= 0), amber/gold for deficit (< 0)
+                    ctx.fillStyle = netVal >= 0 ? '#bbf7d0' : '#fbbf24';
+                    ctx.beginPath();
+                    ctx.roundRect(x - boxWidth / 2, y - boxHeight / 2, boxWidth, boxHeight, 4);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#111827';
+                    ctx.fillText(formatted, x, y);
+                });
+                ctx.restore();
+            }
+        };
+
+        yearlyTrendChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trendData.labels,
+                datasets: [
+                    {
+                        label: 'Income',
+                        data: trendData.income,
+                        borderColor: '#22c55e',
+                        backgroundColor: '#22c55e',
+                        pointBackgroundColor: '#15803d',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        tension: 0.15
+                    },
+                    {
+                        label: 'Expenditure',
+                        data: trendData.expenditure,
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef4444',
+                        pointBackgroundColor: '#b91c1c',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        tension: 0.15
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: { top: 32, right: 20, left: 10, bottom: 5 }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₦' + value.toLocaleString('en-NG');
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: { family: "'Inter', sans-serif", size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                return ` ${context.dataset.label}: ₦${val.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                            },
+                            afterBody: function(context) {
+                                const idx = context[0].dataIndex;
+                                const netVal = trendData.net[idx] || 0;
+                                const sign = netVal > 0 ? '+' : '';
+                                return `Net (Income - Exp): ${sign}₦${netVal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [netCalloutPlugin]
+        });
+    }
     
     function updateDashboard(timeframe) {
         const data = dashboardData[timeframe];
         renderBudgetBars(data.budget_vs_actual);
         renderDonutChart(data.cash_flow);
+
+        const yearlyRow = document.getElementById('yearlyTrendRow');
+        if (timeframe === 'yearly') {
+            yearlyRow.classList.remove('d-none');
+            renderYearlyTrendChart(data.monthly_trend);
+        } else {
+            yearlyRow.classList.add('d-none');
+        }
     }
     
     document.querySelectorAll('input[name="btnradio"]').forEach(radio => {
