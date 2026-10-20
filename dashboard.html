@@ -130,9 +130,13 @@
                             by the next filing date.
                         </p>
                         <small class="text-muted d-block mt-2">
-                            &#128161; <strong>Pro-Tip:</strong> You can lower this bill by documenting your Rent (up to 20%
-                            relief) and maximize your future wealth by investing in Government Bonds, which are 100%
-                            tax-free.
+                            {% if user.profile_type == ProfileType.INDIVIDUAL %}
+                            &#128161; <strong>Pro-Tip:</strong> You can legally lower this tax bill by logging your <strong>House Rent</strong> (up to 20% tax relief, capped at &#8358;500,000) and <strong>Health Insurance</strong>, and grow your savings tax-free by investing in <strong>FGN Bonds or Treasury Bills</strong>.
+                            {% elif user.profile_type == ProfileType.SMALL_BUSINESS %}
+                            &#128161; <strong>Pro-Tip:</strong> Small businesses with under &#8358;25M in yearly sales pay <strong>0% Company Income Tax</strong>! Once you grow past &#8358;25M, logging all your business costs (like shop/office rent, staff pay, and utilities) and <strong>WHT Credit Notes</strong> from clients will directly reduce the tax you pay. Plus, any idle cash parked in <strong>FGN Bonds</strong> earns 100% tax-free interest.
+                            {% else %}
+                            &#128161; <strong>Pro-Tip:</strong> You are only taxed on your <strong>Assessable Profit</strong>—not your total sales! Log every day-to-day business expense (office rent, salaries, operations) and upload <strong>WHT Credit Notes</strong> deducted by your clients to directly cut this tax bill. You can also park company reserves in <strong>FGN Bonds or Treasury Bills</strong> to earn 100% tax-free interest.
+                            {% endif %}
                         </small>
                         {% endif %}
                     </div>
