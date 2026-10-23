@@ -96,25 +96,7 @@ def _calculate_individual_tax(user, year):
     
     gross_income += inv_gains
             
-    # Min Wage Rule
-    MINIMUM_WAGE_ANNUAL = 800000
-    if gross_income <= MINIMUM_WAGE_ANNUAL:
-        return {
-            "gross_income": gross_income,
-            "taxable_income": 0,
-            "deductions": 0,
-            "total_tax": 0,
-            "reason": "Minimum Wage Exemption",
-            "breakdown": {
-                "pension": 0.0,
-                "nhf": 0.0,
-                "rent_relief": 0.0,
-                "health": 0.0,
-                "cra": 0.0
-            }
-        }
-        
-    # 2. Deductions
+    # 2. Deductions (Always calculate so the user sees their true Pension, NHF, and Reliefs breakdown)
     # Pension 8%, NHF 2.5% of Gross
     pension = gross_income * 0.08
     nhf = gross_income * 0.025
@@ -133,8 +115,7 @@ def _calculate_individual_tax(user, year):
     
     rent_relief = min(rent_expense * 0.20, 500000)
 
-    # Health Insurance Deduction (Usually fully deductible or capped? Prompt says "deducted before tax calculations")
-    # We will treat it as a full relief/deduction from Gross Income
+    # Health Insurance Deduction
     health_insurance_expense = (
         Expense.query
         .join(Category)
@@ -145,16 +126,30 @@ def _calculate_individual_tax(user, year):
         .scalar()
     ) or 0.0
     
-    # CRA (Consolidated Relief Allowance) - Not explicitly in prompt but standard in NG. 
-    # Prompt says: "0% tax on first 800,000" which acts as the effective free allowance in the bands.
-    # We will stick strictly to the PROMPT'S deductions list.
-    
     # Termination Benefit Exemption (50M)
     termination_income = sum(i.amount for i in all_income if i.income_type == IncomeType.TERMINATION_BENEFIT)
     termination_relief = min(termination_income, 50000000)
 
     total_deductions = pension + nhf + rent_relief + health_insurance_expense + termination_relief
     taxable_income = max(0, gross_income - total_deductions)
+
+    # Min Wage / Tax-Free Threshold Rule (First 800k is 0% tax)
+    MINIMUM_WAGE_ANNUAL = 800000
+    if gross_income <= MINIMUM_WAGE_ANNUAL or taxable_income <= MINIMUM_WAGE_ANNUAL:
+        return {
+            "gross_income": gross_income,
+            "taxable_income": taxable_income,
+            "deductions": total_deductions,
+            "total_tax": 0.0,
+            "reason": "Tax-Free Threshold (Under ₦800,000/yr)" if gross_income > 0 else None,
+            "breakdown": {
+                "pension": pension,
+                "nhf": nhf,
+                "rent_relief": rent_relief,
+                "health": health_insurance_expense,
+                "cra": 0.0
+            }
+        }
     
     # 3. Tax Bands
     # 0% on first 800k
