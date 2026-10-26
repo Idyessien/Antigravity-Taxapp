@@ -4,9 +4,14 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Income Management</h2>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
-            <i class="bi bi-plus-circle"></i> Log Income
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" onclick="openStatementImportModal()">
+                <i class="bi bi-file-earmark-arrow-up me-1"></i> Import Statement (CSV/PDF)
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
+                <i class="bi bi-plus-circle"></i> Log Income
+            </button>
+        </div>
     </div>
 
     <!-- Filter & Search Card -->
@@ -94,7 +99,12 @@
                         <td>{{ inc.description or 'No Description' }}</td>
                         <td><span class="badge text-success bg-success bg-opacity-10 py-2 px-3 rounded-pill">{{ inc.income_type.value }}</span></td>
                         <td class="fw-bold text-success">
-                            {{ inc.currency.value }} {{ "{:,.2f}".format(inc.amount) }}
+                            ₦{{ "{:,.2f}".format(inc.amount) }}
+                            {% if inc.tax_already_deducted and inc.tax_already_deducted > 0 %}
+                            <div class="small text-muted fw-normal">
+                                <i class="bi bi-check2-circle text-success"></i> PAYE Deducted: ₦{{ "{:,.2f}".format(inc.tax_already_deducted) }}
+                            </div>
+                            {% endif %}
                         </td>
                         <td>
                             {% if inc.gross_vs_net == 'Net' %}
@@ -105,7 +115,7 @@
                         </td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary me-2"
-                                onclick="editIncome('{{ inc.id }}', '{{ inc.income_type.value }}', '{{ inc.amount }}', '{{ inc.currency.value }}', '{{ inc.description }}', '{{ inc.date.strftime('%Y-%m-%d') }}')">
+                                onclick="editIncome('{{ inc.id }}', '{{ inc.income_type.value }}', '{{ inc.amount }}', 'NGN', '{{ inc.description }}', '{{ inc.date.strftime('%Y-%m-%d') }}', '{{ inc.tax_already_deducted or 0 }}')">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-danger"
@@ -121,11 +131,17 @@
                                 <i class="bi bi-wallet2 display-1 text-primary" style="opacity: 0.8;"></i>
                             </div>
                             <h4 class="text-dark fw-bold mt-2">Your Ledger is Empty!</h4>
-                            <p class="text-muted mb-4 max-w-md mx-auto">Let's log your first income entry to start generating tax insights and tracking your wealth.</p>
-                            <button class="btn btn-primary btn-lg rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
-                                data-bs-target="#addIncomeModal">
-                                <i class="bi bi-plus-lg"></i> Log First Income
-                            </button>
+                            <p class="text-muted mb-4 max-w-md mx-auto">Let's log your first income entry or import your bank statement to start generating tax insights and tracking your wealth.</p>
+                            <div class="d-flex justify-content-center gap-2">
+                                <button class="btn btn-primary btn-lg rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
+                                    data-bs-target="#addIncomeModal">
+                                    <i class="bi bi-plus-lg"></i> Log First Income
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-lg rounded-pill px-4 shadow-sm"
+                                    onclick="openStatementImportModal()">
+                                    <i class="bi bi-file-earmark-arrow-up"></i> Import Bank Statement
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -147,39 +163,49 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Date</label>
-                        <input type="date" name="date" class="form-control" required>
+                        <input type="date" name="date" class="form-control quick-add-date" required>
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-7 mb-3">
                             <label class="form-label">Type</label>
-                            <select name="income_type" class="form-select" required>
+                            <select name="income_type" id="addIncomeType" class="form-select" onchange="toggleAddPaye(this.value)" required>
                                 {% for type in income_types %}
                                 <option value="{{ type.value }}">{{ type.value }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-5 mb-3">
                             <label class="form-label">Currency</label>
-                            <select name="currency" class="form-select">
-                                <option value="NGN">NGN (₦)</option>
-                                <option value="USD">USD ($)</option>
-                            </select>
+                            <input type="hidden" name="currency" value="NGN">
+                            <input type="text" class="form-control bg-light" value="NGN (₦)" disabled>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Amount</label>
+                        <label class="form-label">Gross Amount (₦)</label>
                         <input type="text" name="amount" class="form-control currency-input" required
                             placeholder="0.00">
+                        <div class="form-text text-muted small">
+                            <i class="bi bi-currency-exchange me-1"></i>Earned in USD/GBP/EUR? Convert at your actual exchange rate and enter the Naira (₦) amount.
+                        </div>
                     </div>
 
-                    <!-- Gross vs Net removed by user request (defaulting to Gross) -->
+                    {% if current_user.profile_type.name == 'INDIVIDUAL' %}
+                    <div class="mb-3" id="addPayeGroup">
+                        <label class="form-label text-success fw-semibold">PAYE Tax Already Deducted on Payslip (₦) <span class="text-muted fw-normal small">(Optional)</span></label>
+                        <input type="text" name="tax_already_deducted" class="form-control currency-input"
+                            placeholder="0.00 (Deducted & remitted by employer)">
+                        <div class="form-text text-muted small">
+                            If your employer already deducted PAYE tax from this salary, enter it here so it is subtracted from what you owe.
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea name="description" class="form-control" rows="2"
-                            placeholder="e.g. Salary, Side Hustle..."></textarea>
+                            placeholder="e.g. Monthly Salary, Consulting Side Hustle..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -206,29 +232,36 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-7 mb-3">
                             <label class="form-label">Type</label>
-                            <select name="income_type" id="editType" class="form-select" required>
+                            <select name="income_type" id="editType" class="form-select" onchange="toggleEditPaye(this.value)" required>
                                 {% for type in income_types %}
                                 <option value="{{ type.value }}">{{ type.value }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-5 mb-3">
                             <label class="form-label">Currency</label>
-                            <select name="currency" id="editCurrency" class="form-select">
-                                <option value="NGN">NGN (₦)</option>
-                                <option value="USD">USD ($)</option>
-                            </select>
+                            <input type="hidden" name="currency" id="editCurrency" value="NGN">
+                            <input type="text" class="form-control bg-light" value="NGN (₦)" disabled>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Amount</label>
+                        <label class="form-label">Gross Amount (₦)</label>
                         <input type="text" name="amount" id="editAmount" class="form-control currency-input" required>
+                        <div class="form-text text-muted small">
+                            <i class="bi bi-currency-exchange me-1"></i>Please convert foreign currency earnings to NGN (₦) at your actual exchange rate.
+                        </div>
                     </div>
 
-                    <!-- Gross vs Net removed -->
+                    {% if current_user.profile_type.name == 'INDIVIDUAL' %}
+                    <div class="mb-3" id="editPayeGroup">
+                        <label class="form-label text-success fw-semibold">PAYE Tax Already Deducted on Payslip (₦) <span class="text-muted fw-normal small">(Optional)</span></label>
+                        <input type="text" name="tax_already_deducted" id="editPayeDeducted" class="form-control currency-input"
+                            placeholder="0.00">
+                    </div>
+                    {% endif %}
 
                     <div class="mb-3">
                         <label class="form-label">Description</label>
@@ -265,6 +298,16 @@
 </div>
 
 <script>
+    function toggleAddPaye(val) {
+        const grp = document.getElementById('addPayeGroup');
+        if (grp) grp.style.display = (val === 'Salary') ? 'block' : 'none';
+    }
+
+    function toggleEditPaye(val) {
+        const grp = document.getElementById('editPayeGroup');
+        if (grp) grp.style.display = (val === 'Salary') ? 'block' : 'none';
+    }
+
     function confirmDelete(url) {
         const deleteForm = document.getElementById('deleteForm');
         deleteForm.action = url;
@@ -272,18 +315,29 @@
         modal.show();
     }
 
-    function editIncome(id, type, amount, currency, description, date) {
+    function editIncome(id, type, amount, currency, description, date, payeDeducted) {
         document.getElementById('editType').value = type;
+        toggleEditPaye(type);
 
-        const parts = parseFloat(amount).toString().split('.');
+        const parts = parseFloat(amount || 0).toString().split('.');
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         document.getElementById('editAmount').value = parts.join('.');
 
-        document.getElementById('editCurrency').value = currency;
+        const payeInput = document.getElementById('editPayeDeducted');
+        if (payeInput) {
+            const pVal = parseFloat(payeDeducted || 0);
+            if (pVal > 0) {
+                const pParts = pVal.toString().split('.');
+                pParts[0] = pParts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                payeInput.value = pParts.join('.');
+            } else {
+                payeInput.value = '';
+            }
+        }
+
+        document.getElementById('editCurrency').value = 'NGN';
         document.getElementById('editDate').value = date;
         document.getElementById('editDesc').value = description == 'None' ? '' : description;
-
-        // Gross/Net logic removed (Always Gross now)
 
         document.getElementById('editIncomeForm').action = "/income/edit/" + id;
         var myModal = new bootstrap.Modal(document.getElementById('editIncomeModal'));
