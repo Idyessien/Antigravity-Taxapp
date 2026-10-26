@@ -127,16 +127,23 @@
 
     <!-- Recent Expenses List -->
     <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-white">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Recent Expenses</h5>
+            {% if recent_expenses %}
+            <form method="POST" action="{{ url_for('settings.clear_all_expenses') }}" onsubmit="return confirm('Are you sure you want to clear all {{ recent_expenses|length }} expense entries? You can re-import your bank statement right after.');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash3 me-1"></i> Clear All Expenses
+                </button>
+            </form>
+            {% endif %}
         </div>
         <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-            <table class="table table-sm table-hover mb-0">
+            <table class="table table-sm table-hover align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Category</th>
-                        <th>Desc</th>
+                        <th>Category (Click to Change)</th>
+                        <th>Description</th>
                         <th>Amount</th>
                         <th></th>
                     </tr>
@@ -144,21 +151,27 @@
                 <tbody>
                     {% for exp in recent_expenses %}
                     <tr>
-                        <td>{{ exp.date.strftime('%d-%m-%Y') }}</td>
-                        <td>
-                            <span class="badge" style="background-color: #f8f9fa; color: #495057; font-size: 0.85em; font-weight: 500; border: 1px solid #e9ecef;">
-                                {{ EMOJI_MAP.get(exp.category.name, EMOJI_MAP.get(exp.category.group, '🏷️')) }} {{ exp.category.name }}
-                            </span>
-                            {% if budget_status[exp.category_id].is_over %}
-                            <span class="text-danger ms-1" title="Over Budget!" data-bs-toggle="tooltip">
-                                <i class="bi bi-exclamation-triangle-fill"></i>
-                            </span>
-                            {% endif %}
+                        <td class="text-nowrap">{{ exp.date.strftime('%d-%m-%Y') }}</td>
+                        <td style="min-width: 220px;">
+                            <form method="POST" action="{{ url_for('settings.update_expense_category', id=exp.id) }}" class="d-flex align-items-center m-0">
+                                <select name="category_id" class="form-select form-select-sm py-1" style="font-size: 0.82rem;" onchange="this.form.submit()">
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.id }}" {% if cat.id == exp.category_id %}selected{% endif %}>
+                                        {{ EMOJI_MAP.get(cat.name, EMOJI_MAP.get(cat.group, '🏷️')) }} {{ cat.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if budget_status.get(exp.category_id) and budget_status[exp.category_id].is_over %}
+                                <span class="text-danger ms-1" title="Over Budget!" data-bs-toggle="tooltip">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                </span>
+                                {% endif %}
+                            </form>
                         </td>
                         <td>{{ exp.description }}</td>
-                        <td>₦{{ "{:,.2f}".format(exp.amount) }}</td>
+                        <td class="text-nowrap fw-semibold">₦{{ "{:,.2f}".format(exp.amount) }}</td>
                         <td><a href="{{ url_for('settings.delete_expense', id=exp.id) }}"
-                                class="text-danger">&times;</a></td>
+                                class="text-danger fw-bold text-decoration-none px-2" title="Delete">&times;</a></td>
                     </tr>
                     {% else %}
                     <tr>
