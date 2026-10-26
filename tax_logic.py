@@ -63,26 +63,13 @@ def _calculate_individual_tax(user, year):
     ).all()
     
     gross_income = 0.0
+    salary_income = 0.0
     for inc in all_income:
         if inc.is_taxable:
             amount = inc.amount
-            # Legacy Note: We used to support Net income conversion here.
-            # However, per user request, we now treat all logged income as GROSS.
-            # If we ever need to support Net again, we should re-enable `calculate_gross_from_net`.
-            
-            # 2026 Act: Termination Benefit Exemption (Max 50M)
-            if inc.income_type == IncomeType.TERMINATION_BENEFIT:
-                 # We need to track cumulative termination benefits if multiple enteries exist
-                 # For simplicity in this loop, we assume single entry or simple sum.
-                 # Actually, we should deduct the exempt portion.
-                 # But we don't know the cumulative yet.
-                 # Better approach: Don't add to gross here. Collect them separate?
-                 # No, just add full amount, then deduct exemption in 'Deductions' phase or subtract from Gross?
-                 # Prompt says "Exempt up to 50M". 
-                 # Let's add full amount to Gross, then subtract exemption as a Deduction/Relief.
-                 pass
-                 
             gross_income += amount
+            if inc.income_type == IncomeType.SALARY:
+                salary_income += amount
 
     # Add Capital Gains to Gross Income (Individuals) - Act 2026
     # Fetch realized gains for the year
@@ -96,10 +83,31 @@ def _calculate_individual_tax(user, year):
     
     gross_income += inv_gains
             
-    # 2. Deductions (Always calculate so the user sees their true Pension, NHF, and Reliefs breakdown)
-    # Pension 8%, NHF 2.5% of Gross
-    pension = gross_income * 0.08
-    nhf = gross_income * 0.025
+    # 2. Deductions
+    # Mandatory Pension (8%) and NHF (2.5%) apply strictly to employment SALARY income.
+    # For Side Hustles / Self-Employed income, users can log voluntary contributions via Expense buckets.
+    voluntary_pension_expense = (
+        Expense.query
+        .join(Category)
+        .filter(Expense.user_id == user.id)
+        .filter(extract('year', Expense.date) == year)
+        .filter(Category.name.like("%Voluntary Pension%"))
+        .with_entities(func.sum(Expense.amount))
+        .scalar()
+    ) or 0.0
+
+    voluntary_nhf_expense = (
+        Expense.query
+        .join(Category)
+        .filter(Expense.user_id == user.id)
+        .filter(extract('year', Expense.date) == year)
+        .filter(Category.name.like("%NHF Contribution%"))
+        .with_entities(func.sum(Expense.amount))
+        .scalar()
+    ) or 0.0
+
+    pension = (salary_income * 0.08) + voluntary_pension_expense
+    nhf = (salary_income * 0.025) + voluntary_nhf_expense
     
     # Rent Relief: Min(20% of Rent, 500k). 
     # Use 'like' to match "Rent (Annual/Monthly)" or similar
@@ -115,7 +123,7 @@ def _calculate_individual_tax(user, year):
     
     rent_relief = min(rent_expense * 0.20, 500000)
 
-    # Health Insurance Deduction
+    # Health & Life Insurance Deduction
     health_insurance_expense = (
         Expense.query
         .join(Category)
@@ -125,12 +133,22 @@ def _calculate_individual_tax(user, year):
         .with_entities(func.sum(Expense.amount))
         .scalar()
     ) or 0.0
+
+    life_insurance_expense = (
+        Expense.query
+        .join(Category)
+        .filter(Expense.user_id == user.id)
+        .filter(extract('year', Expense.date) == year)
+        .filter(Category.name.like("%Life Insurance%"))
+        .with_entities(func.sum(Expense.amount))
+        .scalar()
+    ) or 0.0
     
     # Termination Benefit Exemption (50M)
     termination_income = sum(i.amount for i in all_income if i.income_type == IncomeType.TERMINATION_BENEFIT)
     termination_relief = min(termination_income, 50000000)
 
-    total_deductions = pension + nhf + rent_relief + health_insurance_expense + termination_relief
+    total_deductions = pension + nhf + rent_relief + health_insurance_expense + life_insurance_expense + termination_relief
     taxable_income = max(0, gross_income - total_deductions)
 
     # Min Wage / Tax-Free Threshold Rule (First 800k is 0% tax)
@@ -147,6 +165,7 @@ def _calculate_individual_tax(user, year):
                 "nhf": nhf,
                 "rent_relief": rent_relief,
                 "health": health_insurance_expense,
+                "life_insurance": life_insurance_expense,
                 "cra": 0.0
             }
         }
@@ -205,11 +224,8 @@ def _calculate_individual_tax(user, year):
             "nhf": nhf,
             "rent_relief": rent_relief,
             "health": health_insurance_expense,
-            "cra": 0.0 # CRA logic was removed from simplified calculation, but user asked for standard Nigeria deductions.
-            # If we want to add CRA back (Consolidated Relief Allowance), we should.
-            # But adhering to prompt 3's simplified bands for now unless requested.
-            # Wait, user said "Breakdown for deductions ... Pension, NHF, Rent".
-            # I will return what we calculate.
+            "life_insurance": life_insurance_expense,
+            "cra": 0.0
         }
     }
 

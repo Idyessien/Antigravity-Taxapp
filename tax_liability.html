@@ -96,17 +96,17 @@
                         <!-- Deduction Details (Indented) -->
                         <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
                             <span>
-                                Pension (8%)
+                                Pension (8% of Salary + Voluntary)
                                 <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
-                                   title="Mandatory 8% employee contribution toward your Retirement Savings Account (RSA), which is 100% tax-deductible."></i>
+                                   title="Mandatory 8% contribution automatically calculated on Salary income, plus any Voluntary Pension / RSA expenses logged from side hustles."></i>
                             </span>
                             <span>{{ "{:,.2f}".format(tax_info.breakdown.pension) }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
                             <span>
-                                NHF (2.5%)
+                                NHF (2.5% of Salary + Voluntary)
                                 <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
-                                   title="National Housing Fund (NHF): A 2.5% contribution that qualifies you for low-interest federal mortgage loans and is exempt from income tax."></i>
+                                   title="National Housing Fund (NHF): 2.5% automatically calculated on Salary income, plus any Voluntary NHF contributions logged under Expenses."></i>
                             </span>
                             <span>{{ "{:,.2f}".format(tax_info.breakdown.nhf) }}</span>
                         </li>
@@ -124,6 +124,16 @@
                         <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
                             <span>Health Insurance</span>
                             <span>{{ "{:,.2f}".format(tax_info.breakdown.health) }}</span>
+                        </li>
+                        {% endif %}
+                        {% if tax_info.breakdown.life_insurance and tax_info.breakdown.life_insurance > 0 %}
+                        <li class="list-group-item d-flex justify-content-between text-muted bg-light ps-4 py-1 small">
+                            <span>
+                                Life Insurance / Assurance
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="100% tax-deductible statutory relief for life assurance premiums paid during the year."></i>
+                            </span>
+                            <span>{{ "{:,.2f}".format(tax_info.breakdown.life_insurance) }}</span>
                         </li>
                         {% endif %}
                         <li class="list-group-item d-flex justify-content-between bg-light">

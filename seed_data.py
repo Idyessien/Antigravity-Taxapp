@@ -42,6 +42,11 @@ def seed_categories():
             # --- Health & Medical ---
             {"name": "Health Insurance", "group": "Health & Medical", "target": CategoryTarget.INDIVIDUAL},
             {"name": "Medical Expenses (Prescriptions etc)", "group": "Health & Medical", "target": CategoryTarget.INDIVIDUAL},
+            {"name": "Life Insurance / Assurance", "group": "Health & Medical", "target": CategoryTarget.INDIVIDUAL},
+
+            # --- Tax Reliefs & Statutory ---
+            {"name": "Voluntary Pension / RSA", "group": "Tax Reliefs & Statutory", "target": CategoryTarget.INDIVIDUAL},
+            {"name": "NHF Contribution (Voluntary)", "group": "Tax Reliefs & Statutory", "target": CategoryTarget.INDIVIDUAL},
             
             # --- Investment ---
             {"name": "Investments & Savings", "group": "Investment", "target": CategoryTarget.INDIVIDUAL},

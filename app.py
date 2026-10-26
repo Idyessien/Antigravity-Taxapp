@@ -93,6 +93,21 @@ def inject_quick_add_data():
                     IncomeType.INVESTMENT, IncomeType.BROUGHT_FORWARD, IncomeType.OTHER
                 ]
             
+            # Ensure new statutory relief categories exist on live DB without requiring /initdb
+            required_ind_cats = [
+                ("Life Insurance / Assurance", "Health & Medical"),
+                ("Voluntary Pension / RSA", "Tax Reliefs & Statutory"),
+                ("NHF Contribution (Voluntary)", "Tax Reliefs & Statutory")
+            ]
+            existing_sys_names = {c.name for c in Category.query.filter_by(user_id=None).all()}
+            added_any = False
+            for r_name, r_group in required_ind_cats:
+                if r_name not in existing_sys_names:
+                    db.session.add(Category(name=r_name, group=r_group, target_profile=CategoryTarget.INDIVIDUAL))
+                    added_any = True
+            if added_any:
+                db.session.commit()
+
             sys_cats = Category.query.filter_by(user_id=None).all()
             user_cats = Category.query.filter_by(user_id=current_user.id).all()
             unique_cats = {c.name.lower(): c for c in (sys_cats + user_cats)}.values()
@@ -126,7 +141,10 @@ def inject_quick_add_data():
                 "Software & Subscriptions": "💻",
                 "Gym Membership": "🏋️",
                 "Health Insurance": "🏥",
+                "Life Insurance / Assurance": "🛡️",
                 "Medical Expenses (Prescriptions etc)": "💊",
+                "Voluntary Pension / RSA": "🏦",
+                "NHF Contribution (Voluntary)": "🏘️",
                 "Petrol/Diesel (Vehicle)": "⛽",
                 "Diesel/Fuel (Generator/Vehicle)": "⛽",
                 "Public Transport (Danfo, BRT, Keke)": "🚌",
@@ -149,6 +167,7 @@ def inject_quick_add_data():
                 "Utilities": "💡",
                 "Household & Food": "🛍️",
                 "Health & Medical": "⚕️",
+                "Tax Reliefs & Statutory": "🛡️",
                 "Investment": "📈",
                 "Facility": "🏢",
                 "HR": "👥",
