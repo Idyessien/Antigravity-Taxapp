@@ -12,11 +12,13 @@ income_bp = Blueprint('income', __name__)
 def income_dashboard():
     if request.method == 'POST':
         # Add Income Logic
-        amount_str = request.form.get('amount', '0').replace(',', '')
+        amount_str = str(request.form.get('amount') or '0').replace(',', '').strip()
         amount = float(amount_str) if amount_str else 0.0
+        paye_str = str(request.form.get('tax_already_deducted') or '0').replace(',', '').strip()
+        paye_val = float(paye_str) if paye_str else 0.0
         date_str = request.form.get('date')
         income_type = request.form.get('income_type')
-        currency = request.form.get('currency', 'NGN')
+        currency = 'NGN'
         gross_vs_net = request.form.get('gross_vs_net', 'Gross')
         description = request.form.get('description')
         
@@ -27,10 +29,10 @@ def income_dashboard():
             except ValueError:
                 pass
                 
-        # Handle "Monthly" Frequency -> Just a tag now, or we can ignore frequency as requested
-        # User wants "Month by Month input", so we treat it as single entry.
-        
         inc_type_enum = IncomeType(income_type)
+        if inc_type_enum != IncomeType.SALARY:
+            paye_val = 0.0
+
         is_tax = True
         if inc_type_enum in [IncomeType.GIFT, IncomeType.BROUGHT_FORWARD]:
             is_tax = False
@@ -38,13 +40,13 @@ def income_dashboard():
         new_income = Income(
             user_id=current_user.id,
             amount=amount,
+            tax_already_deducted=paye_val,
             date=income_date,
             description=description,
             income_type=inc_type_enum,
             currency=Currency(currency),
-            gross_vs_net="Gross", # User requested to remove Net option
+            gross_vs_net="Gross",
             is_taxable=is_tax
-            # frequency handled implicitly as One-Off
         )
         db.session.add(new_income)
         db.session.commit()
@@ -92,10 +94,6 @@ def income_dashboard():
             
     recent_incomes = query.order_by(Income.date.desc()).all()
     
-    # Brought Forward (Calculated dynamically or kept as variable)
-    # User said "Remove brought forward green dashboard in the Income tab only".
-    # So we don't need to pass 'brought_forward' to template anymore, or we can leave it but not show it.
-    
     ptype = current_user.profile_type
     if ptype == ProfileType.CORPORATION:
         allowed_income_types = [
@@ -129,11 +127,14 @@ def edit_income(id):
     inc.source_name = request.form.get('source_name')
     inc.income_type = IncomeType(request.form.get('income_type'))
     
-    amount_str = request.form.get('amount', '0').replace(',', '')
+    amount_str = str(request.form.get('amount') or '0').replace(',', '').strip()
     inc.amount = float(amount_str) if amount_str else 0.0
     
-    inc.currency = Currency(request.form.get('currency'))
-    inc.gross_vs_net = request.form.get('gross_vs_net')
+    paye_str = str(request.form.get('tax_already_deducted') or '0').replace(',', '').strip()
+    inc.tax_already_deducted = float(paye_str) if (paye_str and inc.income_type == IncomeType.SALARY) else 0.0
+    
+    inc.currency = Currency.NGN
+    inc.gross_vs_net = "Gross"
     inc.description = request.form.get('description')
     
     date_str = request.form.get('date')
@@ -142,18 +143,6 @@ def edit_income(id):
             inc.date = datetime.strptime(date_str, '%Y-%m-%d')
         except ValueError:
             pass
-
-    frequency = request.form.get('frequency', 'One-Off')
-    if frequency == 'Monthly' and inc.income_type == IncomeType.SALARY:
-         # Edit logic: If switching to Monthly, re-annualize? 
-         # Risk of double-annualizing if already annual. 
-         # We assume Edit overrides Amount directly. 
-         # If User explicitly changes Amount AND sets Frequency=Monthly, we calc.
-         # But usually Edit is direct. Let's just apply Net-to-Gross if changed.
-         pass 
-
-    inc.gross_vs_net = "Gross"
-    # Previously had Net-to-Gross conversion logic here, removed per user request.
             
     # Re-check taxable status just in case type changed
     inc.is_taxable = True

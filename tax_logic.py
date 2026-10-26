@@ -64,7 +64,9 @@ def _calculate_individual_tax(user, year):
     
     gross_income = 0.0
     salary_income = 0.0
+    paye_deducted = 0.0
     for inc in all_income:
+        paye_deducted += (inc.tax_already_deducted or 0.0)
         if inc.is_taxable:
             amount = inc.amount
             gross_income += amount
@@ -159,6 +161,7 @@ def _calculate_individual_tax(user, year):
             "taxable_income": taxable_income,
             "deductions": total_deductions,
             "total_tax": 0.0,
+            "paye_deducted": paye_deducted,
             "reason": "Tax-Free Threshold (Under ₦800,000/yr)" if gross_income > 0 else None,
             "breakdown": {
                 "pension": pension,
@@ -219,6 +222,7 @@ def _calculate_individual_tax(user, year):
         "taxable_income": taxable_income,
         "deductions": total_deductions,
         "total_tax": tax,
+        "paye_deducted": paye_deducted,
         "breakdown": {
             "pension": pension,
             "nhf": nhf,
@@ -262,6 +266,17 @@ def _calculate_business_tax(user, year):
     ) or 0.0
     
     profit = revenue - total_exp
+
+    # Calculate Claimable Input VAT on Stock / Inventory & Raw Materials (Section 17 VAT Act)
+    stock_resale_exp = (
+        Expense.query
+        .join(Category)
+        .filter(Expense.user_id == user.id)
+        .filter(Expense.date >= start_date, Expense.date <= end_date)
+        .filter(Category.name.like("%Stock / Inventory%"))
+        .with_entities(func.sum(Expense.amount))
+        .scalar()
+    ) or 0.0
     
     is_prof_services = (user.industry == Industry.PROFESSIONAL_SERVICES) if user.industry else False
     
@@ -276,17 +291,19 @@ def _calculate_business_tax(user, year):
     # Logic
     if is_prof_services:
         cit_tax = max(0, profit) * cit_rate
-        dev_levy_rate = 0.04 # Tertiary Education Tax (3%)
+        dev_levy_rate = 0.04
+        if revenue > 25000000:
+            vat_enabled = True
     else:
         # Standard Rules
         if revenue <= 25000000:
-            # Small Company (<25M): Exempt from CIT
+            # Small Company (<25M): Exempt from CIT & VAT
             cit_tax = 0.0
             dev_levy_rate = 0.0
         elif 25000000 < revenue <= 100000000:
             # Medium Company (25M - 100M): 20% CIT
             cit_tax = max(0, profit) * cit_rate
-            dev_levy_rate = 0.04 # TET applies
+            dev_levy_rate = 0.04
             vat_enabled = True # VAT limit is 25M turnover
         else:
             # Large Company (>100M): 30% CIT
@@ -296,6 +313,10 @@ def _calculate_business_tax(user, year):
             
     # Education Tax / Dev Levy logic
     dev_levy = max(0, profit) * dev_levy_rate
+
+    output_vat = (revenue * 0.075) if vat_enabled else 0.0
+    input_vat = (stock_resale_exp * 0.075) if vat_enabled else 0.0
+    net_vat_payable = max(0.0, output_vat - input_vat)
     
     return {
         "revenue": revenue,
@@ -303,12 +324,17 @@ def _calculate_business_tax(user, year):
         "cit_tax": cit_tax,
         "dev_levy": dev_levy,
         "total_tax": cit_tax + dev_levy,
+        "paye_deducted": 0.0,
         "vat_status": "Active" if vat_enabled else "Exempt",
+        "output_vat": output_vat,
+        "input_vat": input_vat,
+        "net_vat_payable": net_vat_payable,
         "breakdown": {
             "pension": 0.0,
             "nhf": 0.0,
             "rent_relief": 0.0,
             "health": 0.0,
+            "life_insurance": 0.0,
             "cra": 0.0
         }
     }

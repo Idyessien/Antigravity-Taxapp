@@ -502,3 +502,233 @@ def delete_subscription(id):
         db.session.commit()
         flash('Subscription removed.')
     return redirect(url_for('settings.expenses'))
+
+
+@settings_bp.route('/statement/template')
+@login_required
+def download_statement_template():
+    from flask import Response
+    csv_content = (
+        "Date,Description,Debit,Credit\n"
+        "2026-10-01,Monthly Salary Payment,0,350000\n"
+        "2026-10-03,EKEDC Prepaid Electricity Token,15000,0\n"
+        "2026-10-05,TotalEnergies Fuel Station,25000,0\n"
+        "2026-10-10,Shoprite Supermarket Groceries,42000,0\n"
+    )
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment;filename=Nigeria_Bank_Statement_Template.csv"}
+    )
+
+
+@settings_bp.route('/statement/import', methods=['POST'])
+@login_required
+def import_bank_statement():
+    import csv
+    import io
+    import re
+    from datetime import datetime
+    from models import Expense, Income, IncomeType, Currency, Category, CategoryTarget, CategorizationRule, ProfileType
+
+    uploaded_file = request.files.get('statement_file')
+    pdf_password = request.form.get('pdf_password', '').strip()
+    redirect_to = request.form.get('redirect_to') or url_for('settings.expenses')
+
+    if not uploaded_file or not uploaded_file.filename:
+        flash('Please select a CSV or PDF bank statement file to upload.', 'warning')
+        return redirect(redirect_to)
+
+    filename = uploaded_file.filename.lower()
+
+    # Build category lookup for this user
+    is_ind = (current_user.profile_type == ProfileType.INDIVIDUAL)
+    target_prof = CategoryTarget.INDIVIDUAL if is_ind else CategoryTarget.BUSINESS
+    user_cats = Category.query.filter(
+        (Category.user_id == current_user.id) | (Category.user_id == None),
+        Category.target_profile.in_([target_prof, CategoryTarget.BOTH]),
+        Category.name != "Investments & Savings"
+    ).all()
+    cat_by_name = {c.name.lower(): c for c in user_cats}
+    default_cat = user_cats[0] if user_cats else Category.query.first()
+    custom_rules = CategorizationRule.query.filter_by(is_active=True).all()
+
+    def match_expense_category(desc_text):
+        d = (desc_text or '').lower()
+        # 1. Check Admin CategorizationRules first
+        for rule in custom_rules:
+            if rule.keyword and rule.keyword.lower() in d:
+                rule.match_count = (rule.match_count or 0) + 1
+                matched = Category.query.get(rule.category_id)
+                if matched:
+                    return matched.id
+
+        # 2. Built-in Nigerian keyword heuristics
+        keyword_map = [
+            (['rent', 'landlord', 'tenancy'], 'rent (annual/monthly)' if is_ind else 'office rent'),
+            (['ekedc', 'ikedc', 'aedc', 'phed', 'nepa', 'phcn', 'electricity', 'power', 'disco', 'meter token'], 'electricity' if is_ind else 'electricity (office)'),
+            (['mtn', 'airtel', 'glo', '9mobile', 'spectranet', 'starlink', 'fiberone', 'data', 'airtime', 'internet'], 'internet/ data' if is_ind else 'internet/data (office)'),
+            (['uber', 'bolt', 'indrive', 'lagride'], 'ride-hailing (uber, bolt, indrive etc)' if is_ind else 'logistics & delivery'),
+            (['total', 'nnpc', 'oando', 'conoil', 'ardova', 'bovas', 'mrs', 'fuel', 'petrol', 'diesel', 'filling station'], 'petrol/diesel (vehicle)' if is_ind else 'diesel/fuel (generator/vehicle)'),
+            (['shoprite', 'spar', 'ebano', 'prince ebeano', 'market', 'supermarket', 'food', 'restaurant', 'chowdeck', 'glovo', 'chicken republic', 'kilimanjaro'], 'food' if is_ind else 'office supplies & consumables'),
+            (['hospital', 'pharmacy', 'medplus', 'healthplus', 'clinic', 'medical', 'drug'], 'medical expenses (prescriptions etc)' if is_ind else 'salaries & wages'),
+            (['hmo', 'axa mansard', 'reliance hmo', 'hygeia', 'health insurance'], 'health insurance'),
+            (['life insurance', 'life assurance', 'leadway'], 'life insurance / assurance'),
+            (['rsa', 'pencom', 'stanbic ibtc pension', 'arm pension', 'crusader', 'voluntary pension'], 'voluntary pension / rsa' if is_ind else 'pension contribution (employer)'),
+            (['nhf', 'federal mortgage', 'fmbn'], 'nhf contribution (voluntary)'),
+            (['dstv', 'gotv', 'netflix', 'showmax', 'spotify', 'multichoice', 'youtube'], 'cable tv/ streaming' if is_ind else 'software & subscriptions'),
+            (['aws', 'google cloud', 'microsoft', 'zoom', 'canva', 'github', 'openai'], 'subscription services (icloud, apps etc)' if is_ind else 'software & subscriptions'),
+            (['salary', 'wages', 'payroll', 'stipend'], 'salaries & wages'),
+            (['stamp duty', 'emtl', 'sms alert', 'card maintenance', 'cot', 'commission', 'vat on', 'bank charge', 'nip charge', 'transfer fee'], 'bank charges'),
+            (['stock', 'inventory', 'raw material', 'wholesale', 'restock'], 'stock / inventory & raw materials (resale)')
+        ]
+        for kw_list, target_cat_name in keyword_map:
+            if any(k in d for k in kw_list):
+                if target_cat_name in cat_by_name:
+                    return cat_by_name[target_cat_name].id
+        return default_cat.id if default_cat else 1
+
+    def parse_date_flexible(d_str):
+        if not d_str:
+            return datetime.utcnow()
+        d_str = d_str.strip()
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%d %b %Y', '%d-%b-%Y', '%d %B %Y', '%m/%d/%Y', '%Y/%m/%d', '%d-%b-%y', '%d/%m/%y'):
+            try:
+                return datetime.strptime(d_str, fmt)
+            except ValueError:
+                continue
+        return datetime.utcnow()
+
+    def parse_num_clean(val):
+        if not val:
+            return 0.0
+        s = re.sub(r'[^0-9.-]', '', str(val))
+        try:
+            return abs(float(s)) if s else 0.0
+        except ValueError:
+            return 0.0
+
+    rows_to_process = [] # list of (date_obj, description, debit_amt, credit_amt)
+
+    if filename.endswith('.csv'):
+        try:
+            raw_bytes = uploaded_file.read()
+            try:
+                text = raw_bytes.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                text = raw_bytes.decode('latin-1', errors='ignore')
+
+            reader = csv.DictReader(io.StringIO(text))
+            if reader.fieldnames:
+                headers = [h.strip() for h in reader.fieldnames if h]
+                for row in reader:
+                    norm_row = { (k.strip().lower() if k else ''): (v.strip() if v else '') for k, v in row.items() }
+                    date_val = norm_row.get('date') or norm_row.get('trans date') or norm_row.get('transaction date') or norm_row.get('value date') or ''
+                    desc_val = norm_row.get('description') or norm_row.get('narration') or norm_row.get('remarks') or norm_row.get('details') or norm_row.get('reference') or 'Bank Transaction'
+                    debit_val = norm_row.get('debit') or norm_row.get('withdrawal') or norm_row.get('money out') or norm_row.get('dr') or ''
+                    credit_val = norm_row.get('credit') or norm_row.get('deposit') or norm_row.get('money in') or norm_row.get('cr') or ''
+                    amt_val = norm_row.get('amount') or ''
+                    type_val = (norm_row.get('type') or norm_row.get('transaction type') or norm_row.get('dr/cr') or '').lower()
+
+                    d_amt = parse_num_clean(debit_val)
+                    c_amt = parse_num_clean(credit_val)
+                    if d_amt == 0 and c_amt == 0 and amt_val:
+                        raw_signed = str(amt_val).replace(',', '').strip()
+                        if raw_signed.startswith('-') or 'dr' in type_val or 'debit' in type_val or 'out' in type_val:
+                            d_amt = parse_num_clean(amt_val)
+                        else:
+                            c_amt = parse_num_clean(amt_val)
+
+                    if d_amt > 0 or c_amt > 0:
+                        rows_to_process.append((parse_date_flexible(date_val), desc_val[:240], d_amt, c_amt))
+        except Exception as e:
+            flash(f'Could not parse CSV file: {str(e)}', 'danger')
+            return redirect(redirect_to)
+
+    elif filename.endswith('.pdf'):
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(uploaded_file)
+            if reader.is_encrypted:
+                if pdf_password:
+                    reader.decrypt(pdf_password)
+                else:
+                    flash('This PDF bank statement is password-protected. Please enter your PDF password and try again.', 'warning')
+                    return redirect(redirect_to)
+
+            full_text = ""
+            for page in reader.pages:
+                full_text += (page.extract_text() or "") + "\n"
+
+            # Match transaction lines starting with a date e.g. 01/10/2026, 01-Oct-2026, 2026-10-01
+            line_pattern = re.compile(
+                r'^\s*(\d{1,4}[-/\s](?:\d{1,2}|[A-Za-z]{3})[-/\s]\d{2,4})\s+(.+?)\s+([-+]?[\d,]+\.\d{2})(?:\s+([-+]?[\d,]+\.\d{2}))?(?:\s+([-+]?[\d,]+\.\d{2}))?\s*$'
+            )
+            for line in full_text.splitlines():
+                m = line_pattern.match(line.strip())
+                if m:
+                    dt_str, desc_part, n1, n2, n3 = m.groups()
+                    d_amt = 0.0
+                    c_amt = 0.0
+                    desc_lower = desc_part.lower()
+                    # If 3 numbers on the line: usually Debit, Credit, Balance
+                    if n1 and n2 and n3:
+                        d_amt = parse_num_clean(n1)
+                        c_amt = parse_num_clean(n2)
+                    else:
+                        # 1 or 2 numbers (Amount + Balance): infer Debit vs Credit from keywords/sign
+                        val = parse_num_clean(n1)
+                        if str(n1).startswith('-') or any(w in desc_lower for w in ['trf to', 'pos', 'web', 'ussd', 'airtime', 'bill', 'charge', 'levy', 'debit', 'dr', 'withdrawal', 'purchase']):
+                            d_amt = val
+                        elif any(w in desc_lower for w in ['trf from', 'salary', 'credit', 'cr', 'deposit', 'inward', 'payment from']):
+                            c_amt = val
+                        else:
+                            d_amt = val
+                    if d_amt > 0 or c_amt > 0:
+                        rows_to_process.append((parse_date_flexible(dt_str), desc_part[:240], d_amt, c_amt))
+        except Exception as e:
+            flash(f'Could not read PDF statement: {str(e)}', 'danger')
+            return redirect(redirect_to)
+    else:
+        flash('Unsupported file format. Please upload a .CSV or .PDF bank statement.', 'warning')
+        return redirect(redirect_to)
+
+    inc_count = 0
+    exp_count = 0
+    default_inc_type = IncomeType.SALARY if is_ind else (IncomeType.PRODUCT_SALES if current_user.profile_type == ProfileType.SMALL_BUSINESS else IncomeType.CORE_REVENUE)
+    alt_inc_type = IncomeType.SIDE_GIG if is_ind else IncomeType.SERVICE_FEES
+
+    for dt_obj, desc, d_amt, c_amt in rows_to_process:
+        if d_amt > 0:
+            cat_id = match_expense_category(desc)
+            exp = Expense(
+                user_id=current_user.id,
+                category_id=cat_id,
+                amount=d_amt,
+                description=desc,
+                date=dt_obj
+            )
+            db.session.add(exp)
+            exp_count += 1
+        if c_amt > 0:
+            chosen_inc_type = default_inc_type if ('salary' in desc.lower() or not is_ind) else alt_inc_type
+            inc = Income(
+                user_id=current_user.id,
+                amount=c_amt,
+                date=dt_obj,
+                description=desc,
+                income_type=chosen_inc_type,
+                currency=Currency.NGN,
+                gross_vs_net="Gross",
+                is_taxable=True
+            )
+            db.session.add(inc)
+            inc_count += 1
+
+    db.session.commit()
+    if inc_count == 0 and exp_count == 0:
+        flash('No transactions were detected in the uploaded statement. Try using the CSV format or check the sample template.', 'warning')
+    else:
+        flash(f'Bank Statement Imported! Automatically logged {inc_count} income(s) and {exp_count} categorized expense(s).', 'success')
+    return redirect(redirect_to)
+

@@ -30,12 +30,14 @@ def tax_liability():
     total_offsettable = sum(c.amount for c in offsettable_credits)
     total_final = sum(c.amount for c in final_tax_credits)
     
-    # 4. Calculate Net Payable
+    # 4. Calculate Net Payable (Subtract both PAYE Already Deducted on Salary & Offsettable WHT Credits)
     gross_tax = tax_info.get('total_tax', 0.0)
-    net_payable = max(0, gross_tax - total_offsettable)
+    paye_deducted = tax_info.get('paye_deducted', 0.0)
+    net_payable = max(0.0, gross_tax - paye_deducted - total_offsettable)
     
     return render_template('tax_liability.html',
                            tax_info=tax_info,
+                           paye_deducted=paye_deducted,
                            credits=credits,
                            offsettable_total=total_offsettable,
                            final_tax_total=total_final,

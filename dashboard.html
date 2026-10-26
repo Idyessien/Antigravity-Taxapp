@@ -14,9 +14,12 @@
         </div>
         {% endif %}
     {% endif %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h1>Overview</h1>
         <div class="btn-group">
+            <button type="button" class="btn btn-outline-dark" onclick="openStatementImportModal()">
+                <i class="bi bi-file-earmark-arrow-up"></i> Import Statement (CSV/PDF)
+            </button>
             <a href="{{ url_for('income.income_dashboard') }}" class="btn btn-outline-success">
                 <i class="bi bi-plus-lg"></i> Log Income
             </a>
@@ -25,6 +28,59 @@
             </a>
         </div>
     </div>
+
+    {% if dashboard_data.all_time.cash_flow.income == 0 and dashboard_data.all_time.cash_flow.expenses == 0 %}
+    <!-- First-Time User 3-Step Getting Started Checklist -->
+    <div class="card border-primary border-opacity-25 shadow-sm mb-4" style="background: linear-gradient(135deg, #f8faff 0%, #eef5ff 100%);">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <span class="badge bg-primary rounded-pill mb-2"><i class="bi bi-stars me-1"></i>Quick Start Guide</span>
+                    <h4 class="fw-bold text-dark mb-1">Welcome to TaxOnTheGo! Get your Nigerian Tax & Wealth clarity in 3 steps:</h4>
+                    <p class="text-muted small mb-0">Your data is 100% private and independent—never auto-shared with NRS or State IRS.</p>
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-md-4">
+                    <div class="p-3 bg-white rounded-3 border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="fw-bold text-primary mb-1"><span class="badge bg-primary me-1">1</span> Log Income or Import Statement</div>
+                            <p class="text-muted small mb-2">Upload your Nigerian bank <strong>.CSV or .PDF</strong> statement, or log your Salary (with optional PAYE already deducted) & Side Hustle income.</p>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-dark w-100" onclick="openStatementImportModal()">
+                                <i class="bi bi-file-earmark-arrow-up me-1"></i>Import CSV/PDF
+                            </button>
+                            <a href="{{ url_for('income.income_dashboard') }}" class="btn btn-sm btn-outline-success w-100">+ Income</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-white rounded-3 border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="fw-bold text-primary mb-1"><span class="badge bg-primary me-1">2</span> Track Deductible Reliefs & Expenses</div>
+                            <p class="text-muted small mb-2">Log Rent (for 20% Rent Relief), Voluntary Pension/NHF, Life Assurance, or Business Operating & Stock costs.</p>
+                        </div>
+                        <a href="{{ url_for('settings.expenses') }}" class="btn btn-sm btn-outline-danger w-100 mt-2">
+                            <i class="bi bi-receipt me-1"></i>Log Expenses & Reliefs
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-white rounded-3 border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="fw-bold text-primary mb-1"><span class="badge bg-primary me-1">3</span> View Your Exact Tax Position</div>
+                            <p class="text-muted small mb-2">See what was already deducted at source vs. your true net balance payable to State IRS or NRS (Formerly FIRS).</p>
+                        </div>
+                        <a href="{{ url_for('wht.tax_liability') }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                            <i class="bi bi-shield-check me-1"></i>View Tax Liability
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     {% if alerts %}
     <div class="row mb-3">

@@ -94,7 +94,8 @@ def dashboard():
     
     # Net Payable
     gross_tax = tax_info.get('total_tax', 0)
-    net_tax_payable = max(0, gross_tax - total_wht_credit)
+    paye_deducted = tax_info.get('paye_deducted', 0.0)
+    net_tax_payable = max(0, gross_tax - paye_deducted - total_wht_credit)
     
     from alerts_logic import check_growth_alerts, get_ai_suggestions
     

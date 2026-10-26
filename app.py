@@ -93,17 +93,18 @@ def inject_quick_add_data():
                     IncomeType.INVESTMENT, IncomeType.BROUGHT_FORWARD, IncomeType.OTHER
                 ]
             
-            # Ensure new statutory relief categories exist on live DB without requiring /initdb
-            required_ind_cats = [
-                ("Life Insurance / Assurance", "Health & Medical"),
-                ("Voluntary Pension / RSA", "Tax Reliefs & Statutory"),
-                ("NHF Contribution (Voluntary)", "Tax Reliefs & Statutory")
+            # Ensure new statutory relief & business VAT categories exist on live DB without requiring /initdb
+            required_sys_cats = [
+                ("Life Insurance / Assurance", "Health & Medical", CategoryTarget.INDIVIDUAL),
+                ("Voluntary Pension / RSA", "Tax Reliefs & Statutory", CategoryTarget.INDIVIDUAL),
+                ("NHF Contribution (Voluntary)", "Tax Reliefs & Statutory", CategoryTarget.INDIVIDUAL),
+                ("Stock / Inventory & Raw Materials (Resale)", "Operations", CategoryTarget.BUSINESS)
             ]
             existing_sys_names = {c.name for c in Category.query.filter_by(user_id=None).all()}
             added_any = False
-            for r_name, r_group in required_ind_cats:
+            for r_name, r_group, r_target in required_sys_cats:
                 if r_name not in existing_sys_names:
-                    db.session.add(Category(name=r_name, group=r_group, target_profile=CategoryTarget.INDIVIDUAL))
+                    db.session.add(Category(name=r_name, group=r_group, target_profile=r_target))
                     added_any = True
             if added_any:
                 db.session.commit()
@@ -139,6 +140,7 @@ def inject_quick_add_data():
                 "Tithe/Charity": "🤝",
                 "Subscription Services (icloud, apps etc)": "📱",
                 "Software & Subscriptions": "💻",
+                "Stock / Inventory & Raw Materials (Resale)": "📦",
                 "Gym Membership": "🏋️",
                 "Health Insurance": "🏥",
                 "Life Insurance / Assurance": "🛡️",

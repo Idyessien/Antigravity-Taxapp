@@ -196,6 +196,9 @@
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link fw-bold border ms-2" id="income-tab" data-bs-toggle="pill" data-bs-target="#quick-income" type="button" role="tab">Income</button>
                             </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-bold border ms-2" id="statement-tab" data-bs-toggle="pill" data-bs-target="#quick-statement" type="button" role="tab"><i class="bi bi-file-earmark-arrow-up me-1"></i>Import</button>
+                            </li>
                         </ul>
                         <div class="tab-content" id="quickAddTabsContent">
                             <!-- Expense Form -->
@@ -234,20 +237,32 @@
                             <div class="tab-pane fade" id="quick-income" role="tabpanel">
                                 <form action="{{ url_for('income.income_dashboard') }}" method="POST">
                                     <div class="mb-3">
-                                        <label class="form-label text-muted small fw-bold">Amount</label>
+                                        <label class="form-label text-muted small fw-bold">Amount (NGN)</label>
                                         <div class="input-group input-group-lg">
                                             <span class="input-group-text bg-light border-end-0">₦</span>
                                             <input type="text" name="amount" class="form-control border-start-0 currency-input fw-bold" placeholder="0.00" required>
                                         </div>
+                                        <div class="form-text text-muted" style="font-size: 0.75rem;">
+                                            <i class="bi bi-currency-exchange me-1"></i>Earned in USD/GBP? Convert at your actual exchange rate and enter in Naira (₦).
+                                        </div>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label text-muted small fw-bold">Income Type / Source</label>
-                                        <select name="income_type" class="form-select" required>
+                                        <select name="income_type" id="quickIncomeType" class="form-select" onchange="toggleQuickPaye(this.value)" required>
                                             {% for itype in global_income_types %}
                                             <option value="{{ itype.value }}">{{ itype.value }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
+                                    {% if current_user.profile_type.name == 'INDIVIDUAL' %}
+                                    <div class="mb-3" id="quickPayeGroup" style="display: block;">
+                                        <label class="form-label text-muted small fw-bold">PAYE Tax Already Deducted on Payslip (Optional)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-end-0">₦</span>
+                                            <input type="text" name="tax_already_deducted" class="form-control border-start-0 currency-input" placeholder="0.00 (Already remitted by employer)">
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                     <div class="mb-4 row">
                                         <div class="col-6">
                                             <label class="form-label text-muted small fw-bold">Date</label>
@@ -260,6 +275,34 @@
                                         <input type="hidden" name="currency" value="NGN">
                                     </div>
                                     <button type="submit" class="btn btn-success w-100 py-2 fw-bold rounded-pill">Log Income</button>
+                                </form>
+                            </div>
+
+                            <!-- Bank Statement Import (CSV & PDF) -->
+                            <div class="tab-pane fade" id="quick-statement" role="tabpanel">
+                                <form action="{{ url_for('settings.import_bank_statement') }}" method="POST" enctype="multipart/form-data">
+                                    <div class="alert alert-light border small mb-3">
+                                        <div class="fw-bold text-dark mb-1"><i class="bi bi-bank me-1 text-primary"></i> Auto-Import Nigerian Bank Statements</div>
+                                        <div class="text-muted" style="font-size: 0.78rem;">
+                                            Upload your <strong>.CSV</strong> or <strong>.PDF</strong> statement (GTBank, Zenith, Access, UBA, FirstBank, Kuda, OPay, Moniepoint, etc.). Credits are logged as Income and Debits are auto-categorized into Expenses.
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Select Bank Statement (.CSV or .PDF)</label>
+                                        <input type="file" name="statement_file" class="form-control" accept=".csv,.pdf" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">PDF Password <span class="fw-normal">(Only if your PDF is locked)</span></label>
+                                        <input type="password" name="pdf_password" class="form-control form-control-sm" placeholder="e.g. Account number or PDF PIN (leave blank if unlocked)">
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <a href="{{ url_for('settings.download_statement_template') }}" class="small text-decoration-none fw-semibold">
+                                            <i class="bi bi-download me-1"></i>Download Sample CSV Template
+                                        </a>
+                                    </div>
+                                    <button type="submit" class="btn btn-dark w-100 py-2 fw-bold rounded-pill">
+                                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Upload & Auto-Categorize
+                                    </button>
                                 </form>
                             </div>
                         </div>
@@ -353,6 +396,24 @@
             const todayStr = new Date().toISOString().split('T')[0];
             document.querySelectorAll('.quick-add-date').forEach(el => el.value = todayStr);
         });
+
+        function toggleQuickPaye(val) {
+            const grp = document.getElementById('quickPayeGroup');
+            if (grp) {
+                grp.style.display = (val === 'Salary') ? 'block' : 'none';
+            }
+        }
+
+        function openStatementImportModal() {
+            const modalEl = document.getElementById('quickAddModal');
+            const tabEl = document.getElementById('statement-tab');
+            if (modalEl && tabEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+                const tab = bootstrap.Tab.getOrCreateInstance(tabEl);
+                tab.show();
+            }
+        }
     </script>
 </body>
 

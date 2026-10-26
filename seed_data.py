@@ -70,6 +70,7 @@ def seed_categories():
             {"name": "Levies & LG Charges", "group": "Compliance", "target": CategoryTarget.BUSINESS},
             
             # Operations
+            {"name": "Stock / Inventory & Raw Materials (Resale)", "group": "Operations", "target": CategoryTarget.BUSINESS},
             {"name": "Marketing & Ads", "group": "Operations", "target": CategoryTarget.BUSINESS},
             {"name": "Logistics & Delivery", "group": "Operations", "target": CategoryTarget.BUSINESS},
             {"name": "Professional Services (Legal/Accounting)", "group": "Operations", "target": CategoryTarget.BUSINESS},
